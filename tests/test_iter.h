@@ -37,6 +37,9 @@ member_new();
 void
 member_dispose(member *memb);
 
+void
+g_member_dispose(gpointer data);
+
 static void
 make_name(member *memb);
 

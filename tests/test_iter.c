@@ -5,11 +5,6 @@
 #include "util.h"
 #include "test_iter.h"
 
-/* TODO: Makefile:
- * gcc test_iter.c util.c -I/usr/local/include/glib-2.0 \
- * -I/usr/local/lib/glib-2.0/include -lglib-2.0 -o out/test_iter
- */
-
 
 #define TEST_GROUP_SIZE 5
 
@@ -18,7 +13,8 @@ manager *
 manager_new() {
   manager *mgr = malloc(sizeof(*mgr));
   if (mgr == NULL) { return NULL; }
-  mgr->members = g_hash_table_new(g_direct_hash, g_direct_equal);
+  mgr->members = g_hash_table_new_full(
+    g_direct_hash, g_direct_equal, NULL, g_member_dispose);
   mgr->current_round = 0;
   return mgr;
 }
@@ -41,6 +37,13 @@ member_new() {
 void
 member_dispose(member *memb) {
   free(memb);
+}
+
+void
+g_member_dispose(gpointer data) {
+  member *memb = (member *)data;
+  printf("calling dispose for %s...\n", memb->name);
+  member_dispose(memb);
 }
 
 
@@ -77,8 +80,8 @@ make_name(member *memb) {
     "Elizabeth", "Jackson", "Abigail"
   };
 
-  unsigned first_index = simple_random(ARRAY_SIZE(names));
-  unsigned last_index = simple_random(ARRAY_SIZE(names) - 1);
+  unsigned first_index = simple_random(G_N_ELEMENTS(names));
+  unsigned last_index = simple_random(G_N_ELEMENTS(names) - 1);
 
   snprintf(memb->name, sizeof(memb->name), "%s %s",
     names[first_index], names[last_index]);  
@@ -108,4 +111,6 @@ main(int argc, char **argv) {
   manager *mgr = manager_new();
   test_group_init(mgr);
   g_hash_table_foreach(mgr->members, print_members, NULL);
+  manager_dispose(mgr);
+  return 0;
 }

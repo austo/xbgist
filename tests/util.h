@@ -1,8 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-
 typedef unsigned sched_t;
 
 sched_t
