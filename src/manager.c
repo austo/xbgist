@@ -35,7 +35,7 @@ typedef struct {
 manager *
 manager_new() {
   manager *mgr = malloc(sizeof(manager));
-  mgr->members = g_hash_table_new(g_int_hash, g_int_equal);
+  mgr->members = g_hash_table_new(g_direct_hash, g_direct_equal);
   mgr->current_round = 0;
   return mgr;
 }

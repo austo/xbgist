@@ -1,4 +1,5 @@
-/out/
+tests/out/*
+out/*
 *.[ao]
 *.mk
 *.Makefile

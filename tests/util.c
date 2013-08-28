@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 sched_t
 simple_random(sched_t n) {
   unsigned rnd, limit = RAND_MAX - RAND_MAX % n;
