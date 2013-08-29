@@ -7,6 +7,7 @@
 #define CONTENT_SIZE 128
 #define SCHED_SIZE 100
 #define NAME_SIZE 32
+#define MESSAGE_SIZE 512
 
 typedef unsigned sched_t;
 
@@ -21,6 +22,8 @@ typedef struct manager {
 	guint member_count;
   GHashTable* members;
   int current_round;
+  guint modulo;
+  uv_buf_t buf;
   uv_mutex_t mutex;
 } manager;
 
@@ -54,6 +57,9 @@ remove_member(manager *mgr, guint memb_id);
 
 gboolean
 has_room(manager *mgr);
+
+gboolean
+member_can_transmit(manager *mgr, member *memb);
 
 member *
 member_new();

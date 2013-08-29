@@ -1,10 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <time.h>
 #include <assert.h>
+
 #include <uv.h>
 
 #include "util.h"
+#include "pack_tool.h"
 #include "xb_types.h"
 
 sched_t

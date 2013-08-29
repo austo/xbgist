@@ -8,7 +8,8 @@ CFLAGS = -I/usr/local/include/glib-2.0 -I/usr/local/lib/glib-2.0/include \
 
 LDFLAGS = -lglib-2.0 -luv
 
-SRCS = $(TEST_DIR)/test.c $(SOURCE_DIR)/util.c $(SOURCE_DIR)/xb_types.c
+SRCS = $(TEST_DIR)/test.c $(SOURCE_DIR)/util.c $(SOURCE_DIR)/xb_types.c \
+	$(SOURCE_DIR)/pack_tool.c
 
 OBJS = $(SRCS:.c=.o)
 

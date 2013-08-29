@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <string.h>
 #include <assert.h>
 
@@ -45,6 +46,7 @@ insert_member(manager *mgr, guint memb_id, member *memb) {
   uv_mutex_lock(&mgr->mutex);
   g_hash_table_insert(mgr->members, GINT_TO_POINTER(memb_id), memb);
   memb->mgr = mgr;
+  memb->present = TRUE;
   uv_mutex_unlock(&mgr->mutex);
 }
 
@@ -60,6 +62,12 @@ remove_member(manager *mgr, guint memb_id) {
 gboolean
 has_room(manager *mgr) {
   return g_hash_table_size(mgr->members) < mgr->member_count ? TRUE : FALSE;
+}
+
+
+gboolean
+member_can_transmit(manager *mgr, member *memb) {
+  return mgr->modulo == memb->schedule[mgr->current_round] ? TRUE : FALSE;
 }
 
 

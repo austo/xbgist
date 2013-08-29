@@ -97,7 +97,12 @@ static void
 new_member_after(uv_work_t *req) {
   member *memb = (member*)req->data;
 
-  if (!memb->present) {}
+  /* disconnect unwelcome members */
+  if (!memb->present) {
+    uv_close((uv_handle_t*)&memb->handle, on_close);
+    return;
+  }
+
   broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
   uv_read_start((uv_stream_t*) &user->handle, on_alloc, on_read);
 }
@@ -105,8 +110,9 @@ new_member_after(uv_work_t *req) {
 
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size) {
-  // Return a buffer that wraps a static buffer.
-  // Safe because our on_read() allocations never overlap.
+  /* Return buffer wrapping static buffer
+   * TODO: assert on_read() allocations never overlap
+  */
   static char buf[512];
   return uv_buf_init(buf, sizeof(buf));
 }
@@ -116,20 +122,29 @@ static void
 on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
   member *memb = (member*)handle->data;
   if (nread == -1) {
-  // user disconnected
+  /* user disconnected */
     if (memb->present) {
       broadcast(memb->mgr, "* %s has left the building\n", memb->name);
     }
-    uv_close((uv_handle_t*) &memb->handle, on_close);
+    uv_close((uv_handle_t*)&memb->handle, on_close);
     return;
   }
 
-  user->buf = buf;
-  user->buf.len = nread;
+  assert(memb->present);
+
+  /* TODO:
+   * does user have right to broadcast?
+   * does user want to broadcast?
+   * set buffer for group
+   * broadcast
+   */
+
+  memb->buf = buf;
+  memb->buf.len = nread;
 
   int status = uv_queue_work(
     uv_default_loop(),
-    &user->work,
+    &memb->work,
     broadcast_work,
     (uv_after_work_cb)broadcast_after);
 
@@ -140,7 +155,8 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 static void
 broadcast_work(uv_work_t *req) {
   member *memb = (member*)req->data;
-  broadcast(memb->mgr, "%s said: %.*s", memb->name, (int)memb->buf.len, memb->buf.base);
+  broadcast(memb->mgr, "%s said: %.*s", memb->name,
+    (int)memb->buf.len, memb->buf.base);
 }
 
 
@@ -149,7 +165,7 @@ broadcast_after(uv_work_t *req) {
   member *memb = (member*)req->data;
 
   fprintf(stdout, "Broadcast \"%.*s\" from %s.\n",
-    (int)(user->buf.len - 1), user->buf.base, user->id);
+    (int)(memb->buf.len - 1), user->buf.base, mwmb->name);
 }
 
 
@@ -164,6 +180,9 @@ on_close(uv_handle_t* handle) {
   member *memb = (member*)handle->data;
   if (memb->present) {
     remove_member(manager *mgr, memb->id)
+  }
+  else {
+    member_dispose(memb);
   }
 }
 

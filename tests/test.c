@@ -6,6 +6,7 @@
 #include "util.h"
 #include "xb_types.h"
 #include "test.h"
+#include "pack_tool.h"
 
 
 #define TEST_GROUP_SIZE 5
