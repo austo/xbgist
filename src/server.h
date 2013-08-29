@@ -1,40 +1,19 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <glib.h>
 #include <uv.h>
 
-#define SCHED_SIZE 100
-#define ID_SIZE 32
-
-typedef unsigned sched_t;
-
-struct user {
-  void* queue[2]; // linked list
-  char id[ID_SIZE];
-  uv_tcp_t handle;
-  uv_work_t work;
-  uv_buf_t buf;
-  sched_t schedule[SCHED_SIZE];
-};
-
-
-static void *
-xmalloc(size_t len);
+#include "xb_types.h"
 
 static void
-fatal(const char *what);
+unicast(struct member *memb, const char *msg);
 
 static void
-unicast(struct user *user, const char *msg);
+g_unicast(gpointer key, gpointer value, gpointer data);
 
 static void
 broadcast(const char *fmt, ...);
-
-static void
-make_user_id(struct user *user);
-
-static const char *
-addr_and_port(struct user *user);
 
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size);
@@ -52,10 +31,10 @@ static void
 on_connection(uv_stream_t* server_handle, int status);
 
 static void
-new_user_work(uv_work_t *req);
+new_member_work(uv_work_t *req);
 
 static void 
-new_user_after(uv_work_t *req);
+new_member_after(uv_work_t *req);
 
 static void
 broadcast_work(uv_work_t *req);

@@ -1,8 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <assert.h>
+#include <uv.h>
 
 #include "util.h"
+#include "xb_types.h"
 
 sched_t
 simple_random(sched_t n) {
@@ -50,7 +53,7 @@ fill_disjoint_arrays(
 
   size_t i, j;
 
-  sched_t *arr = malloc(sizeof(sched_t) * n_sched);
+  sched_t *arr = xb_malloc(sizeof(sched_t) * n_sched);
   init_shuffle(arr, n_sched);
 
   for (i = 0; i < sched_len; ++i) {
@@ -60,4 +63,55 @@ fill_disjoint_arrays(
     shuffle(arr, n_sched);
   }
   free(arr);
+}
+
+
+void
+make_name(struct member *memb) {
+  // most popular baby names in Alabama in 2011
+  static const char *names[] = {
+    "Mason", "Ava", "James", "Madison", "Jacob", "Olivia", "John",
+    "Isabella", "Noah", "Addison", "Jayden", "Chloe", "Elijah",
+    "Elizabeth", "Jackson", "Abigail"
+  };
+
+  unsigned first_index = simple_random(G_N_ELEMENTS(names));
+  unsigned last_index = simple_random(G_N_ELEMENTS(names) - 1);
+
+  snprintf(memb->name, sizeof(memb->name), "%s %s",
+    names[first_index], names[last_index]);  
+}
+
+
+const char *
+addr_and_port(struct member *memb) {
+  struct sockaddr_in name;
+  int namelen = sizeof(name);
+  if (uv_tcp_getpeername(
+    &memb->handle, (struct sockaddr*) &name, &namelen)){
+    fatal("uv_tcp_getpeername");
+  }
+
+  char addr[16];
+  static char buf[32];
+  uv_inet_ntop(AF_INET, &name.sin_addr, addr, sizeof(addr));
+  snprintf(buf, sizeof(buf), "%s:%d", addr, ntohs(name.sin_port));
+
+  return buf;
+}
+
+
+void
+fatal(const char *what) {
+  uv_err_t err = uv_last_error(uv_default_loop());
+  fprintf(stderr, "%s: %s\n", what, uv_strerror(err));
+  exit(1);
+}
+
+
+void *
+xb_malloc(size_t size) {
+  void *ptr = malloc(size);
+  assert(ptr != NULL);
+  return ptr;
 }

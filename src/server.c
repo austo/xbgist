@@ -1,28 +1,19 @@
-/* Adapted from "libuv-chat" by Ben Noordhuis
- * https://github.com/bnoordhuis/libuv-chat
- */
-
 #include <stdio.h>
 #include <stdarg.h>
-#include <stddef.h> // offsetof
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <unistd.h> // usleep
+#include <unistd.h>
 
-
-#include "generic_queue.h"
 #include "server.h"
 #include "util.h"
+#include "xb_types.h"
 
 #define SERVER_ADDR "0.0.0.0" // a.k.a. "all interfaces"
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-#define container_of(ptr, type, member) \
-  ((type *) ((char *) (ptr) - offsetof(type, member)))
 
-
-static void* users[2];
+manager *xb_manager;
+uv_mutex_t xb_mutex;
 
 
 int
@@ -35,7 +26,9 @@ main(int argc, char** argv) {
 
   int s_port = atoi(argv[1]);
 
-  QUEUE_INIT(&users);
+  xb_manager = manager_new();
+
+  uv_mutex_init(&xb_mutex);
 
   uv_tcp_t server_handle;
   uv_tcp_init(uv_default_loop(), &server_handle);
@@ -53,6 +46,8 @@ main(int argc, char** argv) {
   printf("Listening at %s:%d\n", SERVER_ADDR, s_port);
   uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 
+  uv_mutex_destroy(&xb_mutex);
+
   return 0;
 }
 
@@ -61,42 +56,49 @@ static void
 on_connection(uv_stream_t* server_handle, int status) {
   assert(status == 0);
 
-  // hurray, a new user!
-  struct user *user = xmalloc(sizeof(*user));
-  user->work.data = (void*)user;
+  member *memb = member_new();
 
-  uv_tcp_init(uv_default_loop(), &user->handle);
+  uv_tcp_init(uv_default_loop(), &memb->handle);
 
-  if (uv_accept(server_handle, (uv_stream_t*) &user->handle)){
+  if (uv_accept(server_handle, (uv_stream_t*) &memb->handle)){
     fatal("uv_accept");
   }
 
   status = uv_queue_work(
     uv_default_loop(),
-    &user->work,
-    new_user_work,
-    (uv_after_work_cb)new_user_after);
+    &memb->work,
+    new_member_work,
+    (uv_after_work_cb)new_member_after);
 
   assert(status == 0);  
 }
 
 
 static void
-new_user_work(uv_work_t *req) {
-  struct user *user = (struct user*)req->data;  
+new_member_work(uv_work_t *req) {
+  member *memb = (member*)req->data;
 
   // add user to the list
-  QUEUE_INSERT_TAIL(&users, &user->queue);
-  make_user_id(user);
+  if (!has_room(xb_manager)) { return; }
+
+  uv_mutex_lock(&xb_mutex);
+
+  if (has_room(xb_manager)) {
+    memb->id = g_hash_table_size(xb_manager->members) + 1;
+    make_name(memb);
+    insert_member(xb_manager, memb->id, memb);
+  }
+
+  uv_mutex_unlock(&xb_mutex);
 }
 
 
 static void 
-new_user_after(uv_work_t *req) {
-  struct user *user = (struct user*)req->data;
+new_member_after(uv_work_t *req) {
+  member *memb = (member*)req->data;
 
-  // now tell everyone & start listening
-  broadcast("* %s joined from %s\n", user->id, addr_and_port(user));
+  if (!memb->present) {}
+  broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
   uv_read_start((uv_stream_t*) &user->handle, on_alloc, on_read);
 }
 
@@ -112,13 +114,13 @@ on_alloc(uv_handle_t* handle, size_t suggested_size) {
 
 static void 
 on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
-  struct user *user = container_of(handle, struct user, handle);
-
+  member *memb = (member*)handle->data;
   if (nread == -1) {
   // user disconnected
-    QUEUE_REMOVE(&user->queue);
-    uv_close((uv_handle_t*) &user->handle, on_close);
-    broadcast("* %s has left the building\n", user->id);
+    if (memb->present) {
+      broadcast(memb->mgr, "* %s has left the building\n", memb->name);
+    }
+    uv_close((uv_handle_t*) &memb->handle, on_close);
     return;
   }
 
@@ -137,17 +139,17 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 
 static void
 broadcast_work(uv_work_t *req) {
-  struct user *user = (struct user*)req->data;
-  broadcast("%s said: %.*s", user->id, (int)user->buf.len, user->buf.base);
+  member *memb = (member*)req->data;
+  broadcast(memb->mgr, "%s said: %.*s", memb->name, (int)memb->buf.len, memb->buf.base);
 }
 
 
 static void 
 broadcast_after(uv_work_t *req) {
-  struct user *user = (struct user*)req->data;
+  member *memb = (member*)req->data;
 
   fprintf(stdout, "Broadcast \"%.*s\" from %s.\n",
-  (int)(user->buf.len - 1), user->buf.base, user->id);
+    (int)(user->buf.len - 1), user->buf.base, user->id);
 }
 
 
@@ -159,22 +161,15 @@ on_write(uv_write_t *req, int status) {
 
 static void
 on_close(uv_handle_t* handle) {
-  struct user *user = container_of(handle, struct user, handle);
-  free(user);
+  member *memb = (member*)handle->data;
+  if (memb->present) {
+    remove_member(manager *mgr, memb->id)
+  }
 }
 
 
 static void
-fatal(const char *what) {
-  uv_err_t err = uv_last_error(uv_default_loop());
-  fprintf(stderr, "%s: %s\n", what, uv_strerror(err));
-  exit(1);
-}
-
-
-static void
-broadcast(const char *fmt, ...) {
-  QUEUE* q;
+broadcast(struct manager *mgr, const char *fmt, ...) {
   char msg[512];
   va_list ap;
 
@@ -182,90 +177,25 @@ broadcast(const char *fmt, ...) {
   vsnprintf(msg, sizeof(msg), fmt, ap);
   va_end(ap);
 
-  int n_users = 0;
-
-  QUEUE_FOREACH(q, &users) {
-    struct user *user = container_of(q, struct user, queue);
-    unicast(user, msg);
-    ++n_users;
-  }
-  if (n_users > 1) {
-    sched_t **schedules = malloc(sizeof(sched_t *) * n_users);
-    n_users = 0;
-
-    QUEUE_FOREACH(q, &users) {
-      struct user *user = container_of(q, struct user, queue);
-      schedules[n_users++] = &user->schedule[0];
-    }
-    fprintf(stdout, "calling fill_disjoint_arrays with %d users.\n", n_users);
-    fill_disjoint_arrays(schedules, n_users, SCHED_SIZE);
-
-    int i, j;
-    for (i = 0; i < n_users; ++i) {
-      for (j = 0; j < SCHED_SIZE; ++j) {
-        if (j > 0) {
-          fprintf(stdout, ", ");
-        }
-        fprintf(stdout, "%d", schedules[i][j]);
-      }
-      fprintf(stdout, "\n");
-    }
-    free(schedules);
-  }
+  iterate_members(mgr, g_unicast, msg, TRUE);  
 }
 
 
 static void
-unicast(struct user *user, const char *msg) {
+g_unicast(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  char *msg = (char *)data;
+  unicast(memb, msg);
+}
+
+
+static void
+unicast(struct member *memb, const char *msg) {
   size_t len = strlen(msg);
-  uv_write_t *req = xmalloc(sizeof(*req) + len);
+  uv_write_t *req = xb_malloc(sizeof(*req) + len);
   void *addr = req + 1;
   memcpy(addr, msg, len);
   uv_buf_t buf = uv_buf_init(addr, len);
-  uv_write(req, (uv_stream_t*) &user->handle, &buf, 1, on_write);
+  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
 }
 
-
-static void
-make_user_id(struct user *user) {
-  // most popular baby names in Alabama in 2011
-  static const char *names[] = {
-    "Mason", "Ava", "James", "Madison", "Jacob", "Olivia", "John",
-    "Isabella", "Noah", "Addison", "Jayden", "Chloe", "Elijah",
-    "Elizabeth", "Jackson", "Abigail"
-  };
-  static unsigned int index0 = 0;
-  static unsigned int index1 = 1;
-
-  snprintf(user->id, sizeof(user->id), "%s %s", names[index0], names[index1]);
-  index0 = (index0 + 3) % ARRAY_SIZE(names);
-  index1 = (index1 + 7) % ARRAY_SIZE(names);
-
-  usleep(10000); //simulate blocking thread
-}
-
-
-static const char *
-addr_and_port(struct user *user) {
-  struct sockaddr_in name;
-  int namelen = sizeof(name);
-  if (uv_tcp_getpeername(
-    &user->handle, (struct sockaddr*) &name, &namelen)){
-    fatal("uv_tcp_getpeername");
-  }
-
-  char addr[16];
-  static char buf[32];
-  uv_inet_ntop(AF_INET, &name.sin_addr, addr, sizeof(addr));
-  snprintf(buf, sizeof(buf), "%s:%d", addr, ntohs(name.sin_port));
-
-  return buf;
-}
-
-
-static void *
-xmalloc(size_t len) {
-  void *ptr = malloc(len);
-  assert(ptr != NULL);
-  return ptr;
-}
