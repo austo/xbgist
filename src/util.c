@@ -7,7 +7,7 @@
 #include <uv.h>
 
 #include "util.h"
-#include "pack_tool.h"
+#include "tpl.h"
 #include "xb_types.h"
 
 sched_t
@@ -66,6 +66,15 @@ fill_disjoint_arrays(
     shuffle(arr, n_sched);
   }
   free(arr);
+}
+
+
+void
+deserialize_payload(struct payload *pload, void *buf, size_t len) {
+  tpl_node *tn = tpl_map("S(iiuc#)", pload, CONTENT_SIZE);
+  tpl_load(tn, TPL_MEM|TPL_EXCESS_OK, buf, len);
+  tpl_unpack(tn,0);
+  tpl_free(tn);
 }
 
 

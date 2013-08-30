@@ -3,8 +3,9 @@
 
 #include <stddef.h>
 
-typedef unsigned sched_t;
+typedef unsigned short sched_t;
 struct member;
+struct payload;
 
 #define container_of(ptr, type, member) \
   ((type *) ((char *) (ptr) - offsetof(type, member)))
@@ -20,6 +21,9 @@ shuffle(sched_t *array, size_t n);
 
 void
 fill_disjoint_arrays(sched_t **schedules, size_t n_sched, size_t sched_len);
+
+void
+deserialize_payload(struct payload *pload, void *buf, size_t len);
 
 void
 make_name(struct member *memb);

@@ -10,6 +10,7 @@
 #include "xb_types.h"
 
 #define SERVER_ADDR "0.0.0.0" // a.k.a. "all interfaces"
+#define ALLOC_BUF_SIZE 512
 
 
 manager *xb_manager;
@@ -39,7 +40,7 @@ main(int argc, char** argv) {
   }
 
   const int backlog = 128;
-  if (uv_listen((uv_stream_t*) &server_handle, backlog, on_connection)) {
+  if (uv_listen((uv_stream_t*)&server_handle, backlog, on_connection)) {
     fatal("uv_listen");
   }
 
@@ -113,7 +114,7 @@ on_alloc(uv_handle_t* handle, size_t suggested_size) {
   /* Return buffer wrapping static buffer
    * TODO: assert on_read() allocations never overlap
   */
-  static char buf[512];
+  static char buf[ALLOC_BUF_SIZE];
   return uv_buf_init(buf, sizeof(buf));
 }
 
@@ -139,6 +140,11 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
    * broadcast
    */
 
+  if (member_can_transmit(xb_manager, memb)) {
+    /* deserialize buffer to message payload */
+    
+  }
+
   memb->buf = buf;
   memb->buf.len = nread;
 
@@ -151,7 +157,7 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
   assert(status == 0);  
 }
 
-
+/* broadcast a given member's message to the entire group */
 static void
 broadcast_work(uv_work_t *req) {
   member *memb = (member*)req->data;

@@ -76,6 +76,7 @@ member_new() {
   member *memb = malloc(sizeof(*memb));
   assert(memb != NULL);
   memb->present = FALSE;
+  memb->message_processed = FALSE;
   memb->work.data = memb;
   memb->handle.data = memb;
   return memb;  

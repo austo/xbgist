@@ -4,16 +4,21 @@
 #include <glib.h>
 #include <uv.h>
 
-#define CONTENT_SIZE 128
+#define CONTENT_SIZE 256
 #define SCHED_SIZE 100
 #define NAME_SIZE 32
-#define MESSAGE_SIZE 512
 
-typedef unsigned sched_t;
+typedef unsigned short sched_t;
+
+typedef enum {
+  SCHEDULE, START, BROADCAST
+} payload_type;
 
 
 typedef struct payload {
+  payload_type type;
   int is_important;
+  sched_t modulo;
   char content[CONTENT_SIZE];
 } payload;
 
@@ -22,8 +27,8 @@ typedef struct manager {
 	guint member_count;
   GHashTable* members;
   int current_round;
-  guint modulo;
-  uv_buf_t buf;
+  sched_t modulo;
+  char content[CONTENT_SIZE];
   uv_mutex_t mutex;
 } manager;
 
@@ -34,6 +39,7 @@ typedef struct member {
   guint id;
   sched_t schedule[SCHED_SIZE];
   gboolean present;
+  gboolean message_processed;
   uv_tcp_t handle;
   uv_work_t work;
   uv_buf_t buf;
