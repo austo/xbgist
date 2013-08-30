@@ -13,6 +13,7 @@
 #define ALLOC_BUF_SIZE 512
 
 
+uv_loop_t *loop;
 manager *xb_manager;
 uv_mutex_t xb_mutex;
 
@@ -31,8 +32,10 @@ main(int argc, char** argv) {
 
   uv_mutex_init(&xb_mutex);
 
+  loop = uv_default_loop();
+
   uv_tcp_t server_handle;
-  uv_tcp_init(uv_default_loop(), &server_handle);
+  uv_tcp_init(loop, &server_handle);
 
   const struct sockaddr_in addr = uv_ip4_addr(SERVER_ADDR, s_port);
   if (uv_tcp_bind(&server_handle, addr)){
@@ -45,7 +48,7 @@ main(int argc, char** argv) {
   }
 
   printf("Listening at %s:%d\n", SERVER_ADDR, s_port);
-  uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+  uv_run(loop, UV_RUN_DEFAULT);
 
   uv_mutex_destroy(&xb_mutex);
 
@@ -59,14 +62,14 @@ on_connection(uv_stream_t* server_handle, int status) {
 
   member *memb = member_new();
 
-  uv_tcp_init(uv_default_loop(), &memb->handle);
+  uv_tcp_init(loop, &memb->handle);
 
   if (uv_accept(server_handle, (uv_stream_t*) &memb->handle)){
     fatal("uv_accept");
   }
 
   status = uv_queue_work(
-    uv_default_loop(),
+    loop,
     &memb->work,
     new_member_work,
     (uv_after_work_cb)new_member_after);
@@ -150,7 +153,7 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
   memb->buf.len = nread;
 
   int status = uv_queue_work(
-    uv_default_loop(),
+    loop,
     &memb->work,
     broadcast_work,
     (uv_after_work_cb)broadcast_after);
