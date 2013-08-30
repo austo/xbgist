@@ -23,6 +23,9 @@ void
 fill_disjoint_arrays(sched_t **schedules, size_t n_sched, size_t sched_len);
 
 void
+serialize_payload(struct payload *pload, void *buf, size_t len);
+
+void
 deserialize_payload(struct payload *pload, void *buf, size_t len);
 
 void

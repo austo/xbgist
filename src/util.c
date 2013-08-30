@@ -70,10 +70,18 @@ fill_disjoint_arrays(
 
 
 void
+serialize_payload(struct payload *pload, void *buf, size_t len) {
+  tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
+  tpl_dump(tn, TPL_MEM|TPL_PREALLOCD, buf, len);
+  tpl_free(tn);
+}
+
+
+void
 deserialize_payload(struct payload *pload, void *buf, size_t len) {
-  tpl_node *tn = tpl_map("S(iiuc#)", pload, CONTENT_SIZE);
+  tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
   tpl_load(tn, TPL_MEM|TPL_EXCESS_OK, buf, len);
-  tpl_unpack(tn,0);
+  tpl_unpack(tn, 0);
   tpl_free(tn);
 }
 

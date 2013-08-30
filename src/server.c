@@ -105,7 +105,7 @@ new_member_after(uv_work_t *req) {
   }
 
   broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
-  uv_read_start((uv_stream_t*) &user->handle, on_alloc, on_read);
+  uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
 }
 
 
@@ -140,14 +140,14 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
    * broadcast
    */
 
-  if (member_can_transmit(xb_manager, memb)) {
-    /* deserialize buffer to message payload */
-    deserialize_payload(&xb_manager->payload, buf, nread);
+  // if (member_can_transmit(xb_manager, memb)) {
+  //    deserialize buffer to message payload 
+  //   deserialize_payload(&xb_manager->payload, buf, nread);
 
-  }
+  // }
 
-  // memb->buf = buf;
-  // memb->buf.len = nread;
+  memb->buf = buf;
+  memb->buf.len = nread;
 
   int status = uv_queue_work(
     uv_default_loop(),
@@ -162,8 +162,28 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 static void
 broadcast_work(uv_work_t *req) {
   member *memb = (member*)req->data;
-  broadcast(memb->mgr, "%s said: %.*s", memb->name,
-    (int)memb->buf.len, memb->buf.base);
+  uv_mutex_lock(&memb->mgr->mutex);
+
+  if (member_can_transmit(xb_manager, memb)) {
+
+    /* deserialize buffer to message payload  */
+    deserialize_payload(&xb_manager->payload, &memb->buf, memb->buf.len);    
+  }
+
+  memb->message_processed = TRUE;
+
+  if (all_messages_processed(memb->mgr)) {
+    calculate_modulo(memb->mgr);
+    memb->mgr->payload.type = BROADCAST;
+    serialize_payload(&xb_manager->payload, &memb->buf, memb->buf.len);
+
+    broadcast(memb->mgr, "%s said: %.*s", memb->name,
+      (int)memb->buf.len, memb->buf.base);
+    memb->mgr->round_finished = TRUE;
+  }
+
+  uv_mutex_unlock(&memb->mgr->mutex);
+
 }
 
 
@@ -171,8 +191,13 @@ static void
 broadcast_after(uv_work_t *req) {
   member *memb = (member*)req->data;
 
+  if (memb->mgr->round_finished) {
+    ++memb->mgr->current_round;
+    memb->mgr->round_finished = FALSE;
+  }
+
   fprintf(stdout, "Broadcast \"%.*s\" from %s.\n",
-    (int)(memb->buf.len - 1), user->buf.base, mwmb->name);
+    (int)(memb->buf.len - 1), memb->buf.base, memb->name);
 }
 
 
@@ -186,7 +211,7 @@ static void
 on_close(uv_handle_t* handle) {
   member *memb = (member*)handle->data;
   if (memb->present) {
-    remove_member(manager *mgr, memb->id)
+    remove_member(memb->mgr, memb->id);
   }
   else {
     member_dispose(memb);
@@ -203,7 +228,7 @@ broadcast(struct manager *mgr, const char *fmt, ...) {
   vsnprintf(msg, sizeof(msg), fmt, ap);
   va_end(ap);
 
-  iterate_members(mgr, g_unicast, msg, TRUE);  
+  iterate_members(mgr, g_unicast, msg, FALSE);
 }
 
 

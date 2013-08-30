@@ -7,7 +7,7 @@ CC = gcc
 
 CFLAGS = -I/usr/local/include/glib-2.0 -I/usr/local/lib/glib-2.0/include \
 	-I/usr/local/include -I$(SOURCE_DIR) -I$(DEPS_DIR) \
-	-Wall -Wextra -Wno-unused-parameter
+	-Wall -Wno-unused-parameter
 
 LDFLAGS = -lglib-2.0 -luv
 

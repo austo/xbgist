@@ -13,7 +13,7 @@ static void
 g_unicast(gpointer key, gpointer value, gpointer data);
 
 static void
-broadcast(const char *fmt, ...);
+broadcast(manager *mgr, const char *fmt, ...);
 
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size);

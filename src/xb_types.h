@@ -8,6 +8,7 @@
 #define SCHED_SIZE 100
 #define NAME_SIZE 32
 
+
 typedef unsigned short sched_t;
 
 typedef enum {
@@ -27,6 +28,7 @@ typedef struct manager {
 	guint member_count;
   GHashTable* members;
   int current_round;
+  gboolean round_finished;
   sched_t modulo;
   payload payload;
   uv_work_t work;
@@ -54,7 +56,7 @@ void
 manager_dispose(manager *mgr);
 
 void
-iterate_members(manager *mgr, GHFunc func, gpointer *data, gboolean lock);
+iterate_members(manager *mgr, GHFunc func, gpointer data, gboolean lock);
 
 void
 insert_member(manager *mgr, guint memb_id, member *memb);
@@ -67,6 +69,15 @@ has_room(manager *mgr);
 
 gboolean
 member_can_transmit(manager *mgr, member *memb);
+
+gboolean
+all_messages_processed(manager *mgr);
+
+void
+g_message_processed(gpointer key, gpointer value, gpointer data);
+
+void
+calculate_modulo(manager *mgr);
 
 member *
 member_new();

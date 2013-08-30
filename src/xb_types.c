@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "xb_types.h"
+#include "util.h"
 
 
 manager *
@@ -15,6 +16,7 @@ manager_new() {
   mgr->members = g_hash_table_new_full(
     g_direct_hash, g_direct_equal, NULL, g_member_dispose);
   mgr->current_round = 0;
+  mgr->round_finished = FALSE;
   return mgr;
 }
 
@@ -28,7 +30,7 @@ manager_dispose(manager *mgr) {
 
 
 void
-iterate_members(manager *mgr, GHFunc func, gpointer *data, gboolean lock) {
+iterate_members(manager *mgr, GHFunc func, gpointer data, gboolean lock) {
   if (lock) {
     uv_mutex_lock(&mgr->mutex);
   }
@@ -68,6 +70,30 @@ has_room(manager *mgr) {
 gboolean
 member_can_transmit(manager *mgr, member *memb) {
   return mgr->modulo == memb->schedule[mgr->current_round] ? TRUE : FALSE;
+}
+
+
+gboolean
+all_messages_processed(manager *mgr) {
+  gboolean retval = TRUE;
+  iterate_members(mgr, g_message_processed, &retval, FALSE);
+  return retval;
+}
+
+
+void
+g_message_processed(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  gboolean *processed = (gboolean *)data;
+  if (*processed) {
+    *processed = memb->message_processed;
+  }
+}
+
+
+void
+calculate_modulo(manager *mgr) {
+  mgr->payload.modulo = simple_random(mgr->member_count);
 }
 
 
