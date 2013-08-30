@@ -28,7 +28,8 @@ typedef struct manager {
   GHashTable* members;
   int current_round;
   sched_t modulo;
-  char content[CONTENT_SIZE];
+  payload payload;
+  uv_work_t work;
   uv_mutex_t mutex;
 } manager;
 

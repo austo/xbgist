@@ -142,11 +142,12 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 
   if (member_can_transmit(xb_manager, memb)) {
     /* deserialize buffer to message payload */
-    
+    deserialize_payload(&xb_manager->payload, buf, nread);
+
   }
 
-  memb->buf = buf;
-  memb->buf.len = nread;
+  // memb->buf = buf;
+  // memb->buf.len = nread;
 
   int status = uv_queue_work(
     uv_default_loop(),
