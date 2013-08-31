@@ -173,7 +173,7 @@ unicast(struct member *memb, const char *msg) {
   void *addr = req + 1;
   memcpy(addr, msg, len);
   uv_buf_t buf = uv_buf_init(addr, len);
-  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
+  uv_write(req, (uv_stream_t*) &memb->client, &buf, 1, on_write);
 }
 
 
@@ -186,4 +186,10 @@ write_payload(struct member *memb) {
 }
 
 
-} // namespace xblab
+void *
+xb_malloc(size_t size) {
+  void *ptr = malloc(size);
+  assert(ptr != NULL);
+  return ptr;
+}
+

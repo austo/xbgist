@@ -37,10 +37,22 @@ static void
 new_member_after(uv_work_t *req);
 
 static void
-broadcast_work(uv_work_t *req);
+read_work(uv_work_t *req);
 
 static void 
-broadcast_after(uv_work_t *req);
+read_after(uv_work_t *req);
+
+
+/*--------------------------------------------------*/
+
+
+static void
+process_schedule(member *memb, payload *pload);
+
+static void
+process_round(member *memb, payload *pload);
+
+
 
 
 #endif

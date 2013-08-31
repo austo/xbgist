@@ -10,8 +10,8 @@
 
 manager *
 manager_new() {
-  manager *mgr = malloc(sizeof(*mgr));
-  assert(mgr != NULL);
+  manager *mgr = xb_malloc(sizeof(*mgr));
+  mgr->payload = xb_malloc(sizeof(*(mgr->payload)));
   assert(uv_mutex_init(&mgr->mutex) == 0);
   mgr->members = g_hash_table_new_full(
     g_direct_hash, g_direct_equal, NULL, g_member_dispose);
@@ -25,6 +25,7 @@ void
 manager_dispose(manager *mgr) {
   g_hash_table_destroy(mgr->members);
   uv_mutex_destroy(&mgr->mutex);
+  free(mgr->payload);
   free(mgr);
 }
 
@@ -92,9 +93,32 @@ g_message_processed(gpointer key, gpointer value, gpointer data) {
 
 
 void
-calculate_modulo(manager *mgr) {
-  mgr->payload.modulo = simple_random(mgr->member_count);
+g_get_schedule_addr(gpointer key, gpointer value, gpointer data) {
+  int idx = GPOINTER_TO_INT(key) - 1;
+  assert(idx >= 0);
+  member *memb = (member *)value;
+  ((sched_t**)data)[idx] = &memb->schedule[0];
 }
+
+
+void
+calculate_modulo(manager *mgr) {
+  mgr->payload->modulo = simple_random(mgr->member_count);
+}
+
+
+void
+fill_member_schedules(manager *mgr) {
+  size_t n_sched = g_hash_table_size(mgr->members);
+  sched_t **schedules = xb_malloc(sizeof(sched_t *) * n_sched);
+
+  iterate_members(mgr, g_get_schedule_addr, schedules, FALSE);
+
+  fill_disjoint_arrays(schedules, n_sched, SCHED_SIZE);
+  free(schedules);
+}
+
+
 
 
 member *
@@ -120,4 +144,11 @@ g_member_dispose(gpointer data) {
   member *memb = (member *)data;
   printf("calling dispose for %s...\n", memb->name);
   member_dispose(memb);
+}
+
+
+void
+assume_payload(manager *mgr, payload *pload) {
+  free(mgr->payload);
+  mgr->payload = pload;
 }

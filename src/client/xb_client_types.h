@@ -8,11 +8,13 @@
 #define SCHED_SIZE 100
 #define NAME_SIZE 32
 
+struct member;
 
 typedef unsigned short sched_t;
+typedef void (*after_read_cb)(struct member *);
 
 typedef enum {
-  SCHEDULE, START, BROADCAST
+  SCHEDULE, READY, START, ROUND
 } payload_type;
 
 
@@ -25,7 +27,6 @@ typedef struct payload {
 
 
 typedef struct member {
-  manager *mgr;
   char name[NAME_SIZE];
   sched_t schedule[SCHED_SIZE];
   gboolean message_processed;
@@ -37,7 +38,19 @@ typedef struct member {
   uv_work_t work;
   uv_buf_t buf;
 
+  after_read_cb callback;
+
 } member;
+
+
+member *
+member_new();
+
+void
+member_dispose(member *memb);
+
+void
+digest_broadcast(member *memb);
 
 
 #endif

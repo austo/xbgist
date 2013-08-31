@@ -12,7 +12,7 @@
 typedef unsigned short sched_t;
 
 typedef enum {
-  SCHEDULE, START, BROADCAST
+  SCHEDULE, READY, START, ROUND
 } payload_type;
 
 
@@ -30,7 +30,7 @@ typedef struct manager {
   int current_round;
   gboolean round_finished;
   sched_t modulo;
-  payload payload;
+  payload *payload;
   uv_work_t work;
   uv_mutex_t mutex;
 } manager;
@@ -77,7 +77,16 @@ void
 g_message_processed(gpointer key, gpointer value, gpointer data);
 
 void
+g_get_schedule_addr(gpointer key, gpointer value, gpointer data);
+
+void
 calculate_modulo(manager *mgr);
+
+void
+fill_member_schedules(manager *mgr);
+
+void
+assume_payload(manager *mgr, payload *pload);
 
 member *
 member_new();

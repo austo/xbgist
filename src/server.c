@@ -107,7 +107,9 @@ new_member_after(uv_work_t *req) {
     return;
   }
 
-  broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
+
+  // TODO: if all members have connected, send schedule
+  // broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
 }
 
@@ -143,55 +145,53 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
    * broadcast
    */
 
-  // if (member_can_transmit(xb_manager, memb)) {
-  //    deserialize buffer to message payload 
-  //   deserialize_payload(&xb_manager->payload, buf, nread);
-
-  // }
-
   memb->buf = buf;
   memb->buf.len = nread;
 
   int status = uv_queue_work(
     loop,
     &memb->work,
-    broadcast_work,
-    (uv_after_work_cb)broadcast_after);
+    read_work,
+    (uv_after_work_cb)read_after);
 
   assert(status == 0);  
 }
 
+
 /* broadcast a given member's message to the entire group */
 static void
-broadcast_work(uv_work_t *req) {
+read_work(uv_work_t *req) {
   member *memb = (member*)req->data;
   uv_mutex_lock(&memb->mgr->mutex);
 
-  if (member_can_transmit(xb_manager, memb)) {
+  payload *temp_pload = xb_malloc(sizeof(*temp_pload));
 
-    /* deserialize buffer to message payload  */
-    deserialize_payload(&xb_manager->payload, &memb->buf, memb->buf.len);    
-  }
+  deserialize_payload(temp_pload, &memb->buf, memb->buf.len);
 
-  memb->message_processed = TRUE;
-
-  if (all_messages_processed(memb->mgr)) {
-    calculate_modulo(memb->mgr);
-    memb->mgr->payload.type = BROADCAST;
-    serialize_payload(&xb_manager->payload, &memb->buf, memb->buf.len);
-
-    broadcast(memb->mgr, "%s said: %.*s", memb->name,
-      (int)memb->buf.len, memb->buf.base);
-    memb->mgr->round_finished = TRUE;
-  }
+  switch(temp_pload->type) {
+    case SCHEDULE: {
+      break;
+    }
+    case READY: {
+      break;
+    }
+    case START: {
+      break;
+    }
+    case ROUND: {
+      process_round(memb, temp_pload);
+      break;
+    }
+  }  
 
   uv_mutex_unlock(&memb->mgr->mutex);
+
 
 }
 
 
 static void 
-broadcast_after(uv_work_t *req) {
+read_after(uv_work_t *req) {
   member *memb = (member*)req->data;
 
   if (memb->mgr->round_finished) {
@@ -199,9 +199,47 @@ broadcast_after(uv_work_t *req) {
     memb->mgr->round_finished = FALSE;
   }
 
+  // TODO: diagnostic message based on type
   fprintf(stdout, "Broadcast \"%.*s\" from %s.\n",
     (int)(memb->buf.len - 1), memb->buf.base, memb->name);
 }
+
+
+/* ROUND WORK FUNCTIONS */
+
+static void
+process_schedule(member *memb, payload *pload) {
+
+}
+
+
+
+static void
+process_round(member *memb, payload *pload) {
+
+  if (member_can_transmit(memb->mgr, memb)) {
+    assume_payload(memb->mgr, pload);
+  }
+  else {
+    free(pload);
+  }
+
+  memb->message_processed = TRUE;
+
+  if (all_messages_processed(memb->mgr)) {
+    calculate_modulo(memb->mgr);
+
+    memb->mgr->payload->type = ROUND;
+    serialize_payload(memb->mgr->payload, &memb->buf, memb->buf.len);
+
+    broadcast(memb->mgr, "%s said: %.*s", memb->name,
+      (int)memb->buf.len, memb->buf.base);
+    memb->mgr->round_finished = TRUE;
+  }
+}
+
+
+/* END ROUND WORK FUNCTIONS */
 
 
 static void
@@ -251,5 +289,6 @@ unicast(struct member *memb, const char *msg) {
   memcpy(addr, msg, len);
   uv_buf_t buf = uv_buf_init(addr, len);
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
+  memb->message_processed = FALSE;
 }
 
