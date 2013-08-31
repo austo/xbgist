@@ -13,7 +13,16 @@ static void
 g_unicast(gpointer key, gpointer value, gpointer data);
 
 static void
+g_unicast_payload(gpointer key, gpointer value, gpointer data);
+
+static void
 broadcast(manager *mgr, const char *fmt, ...);
+
+static void
+broadcast_buffer(struct manager *mgr, void *buf);
+
+static void
+broadcast_schedules(manager *mgr);
 
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size);
@@ -48,6 +57,12 @@ read_after(uv_work_t *req);
 
 static void
 process_schedule(member *memb, payload *pload);
+
+static void
+process_ready(member *memb, payload *pload);
+
+static void
+process_start(member *memb, payload *pload);
 
 static void
 process_round(member *memb, payload *pload);

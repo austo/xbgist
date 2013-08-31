@@ -17,6 +17,7 @@ manager_new() {
     g_direct_hash, g_direct_equal, NULL, g_member_dispose);
   mgr->current_round = 0;
   mgr->round_finished = FALSE;
+  mgr->schedules_sent = FALSE;
   return mgr;
 }
 
@@ -94,10 +95,23 @@ g_message_processed(gpointer key, gpointer value, gpointer data) {
 
 void
 g_get_schedule_addr(gpointer key, gpointer value, gpointer data) {
+
+  // use phony member id to calculate array index
+
   int idx = GPOINTER_TO_INT(key) - 1;
   assert(idx >= 0);
   member *memb = (member *)value;
   ((sched_t**)data)[idx] = &memb->schedule[0];
+}
+
+
+void
+g_member_present(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  gboolean *present = (gboolean *)data;
+  if (*present) {
+    *present = memb->present;
+  }
 }
 
 
@@ -108,23 +122,39 @@ calculate_modulo(manager *mgr) {
 
 
 void
-fill_member_schedules(manager *mgr) {
+fill_member_schedules(manager *mgr, sched_t **schedules) {
   size_t n_sched = g_hash_table_size(mgr->members);
-  sched_t **schedules = xb_malloc(sizeof(sched_t *) * n_sched);
+  gboolean free_sched = FALSE;
+
+  if (schedules == NULL) { // allocate schedules if not provided by client
+    schedules = xb_malloc(sizeof(sched_t *) * n_sched);
+    free_sched = TRUE;
+  }
 
   iterate_members(mgr, g_get_schedule_addr, schedules, FALSE);
 
   fill_disjoint_arrays(schedules, n_sched, SCHED_SIZE);
-  free(schedules);
+
+  if (free_sched) {
+    free(schedules);
+  }
 }
 
 
+gboolean
+all_members_present(manager *mgr) {
+  if (g_hash_table_size(mgr->members) != mgr->member_count) {
+    return FALSE;
+  }
+  gboolean retval = TRUE;
+  iterate_members(mgr, g_member_present, &retval, FALSE);
+  return retval;
+}
 
 
 member *
 member_new() {
-  member *memb = malloc(sizeof(*memb));
-  assert(memb != NULL);
+  member *memb = xb_malloc(sizeof(*memb));
   memb->present = FALSE;
   memb->message_processed = FALSE;
   memb->work.data = memb;

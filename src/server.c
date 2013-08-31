@@ -87,6 +87,7 @@ new_member_work(uv_work_t *req) {
 
   uv_mutex_lock(&xb_mutex);
 
+  // phony member id based on arrival order
   if (has_room(xb_manager)) {
     memb->id = g_hash_table_size(xb_manager->members) + 1;
     make_name(memb);
@@ -107,9 +108,15 @@ new_member_after(uv_work_t *req) {
     return;
   }
 
+  uv_mutex_lock(&memb->mgr->mutex);
+  if (!memb->mgr->schedules_sent && all_members_present(memb->mgr)) {
+    broadcast_schedules(memb->mgr);
+  }
+  uv_mutex_unlock(&memb->mgr->mutex);
 
   // TODO: if all members have connected, send schedule
-  // broadcast(memb->mgr, "* %s joined from %s\n", memb->name, addr_and_port(memb));
+  // broadcast(memb->mgr, "* %s joined from %s\n",
+  //  memb->name, addr_and_port(memb));
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
 }
 
@@ -170,23 +177,24 @@ read_work(uv_work_t *req) {
 
   switch(temp_pload->type) {
     case SCHEDULE: {
+      process_schedule(memb, temp_pload);
       break;
     }
     case READY: {
+      process_ready(memb, temp_pload);
       break;
     }
     case START: {
+      process_start(memb, temp_pload);
       break;
     }
     case ROUND: {
       process_round(memb, temp_pload);
       break;
     }
-  }  
+  }
 
   uv_mutex_unlock(&memb->mgr->mutex);
-
-
 }
 
 
@@ -209,7 +217,17 @@ read_after(uv_work_t *req) {
 
 static void
 process_schedule(member *memb, payload *pload) {
+  assert(0 == 1);
+}
 
+static void
+process_ready(member *memb, payload *pload) {
+  assert(0 == 1);
+}
+
+static void
+process_start(member *memb, payload *pload) {
+  assert(0 == 1);
 }
 
 
@@ -230,10 +248,13 @@ process_round(member *memb, payload *pload) {
     calculate_modulo(memb->mgr);
 
     memb->mgr->payload->type = ROUND;
-    serialize_payload(memb->mgr->payload, &memb->buf, memb->buf.len);
+    char msg[ALLOC_BUF_SIZE] = {0};
+    serialize_payload(memb->mgr->payload, msg, ALLOC_BUF_SIZE);
 
-    broadcast(memb->mgr, "%s said: %.*s", memb->name,
-      (int)memb->buf.len, memb->buf.base);
+    // broadcast(memb->mgr, "%s said: %.*s", memb->name,
+    //   (int)memb->buf.len, memb->buf.base);
+
+    broadcast_buffer(memb->mgr, msg);
     memb->mgr->round_finished = TRUE;
   }
 }
@@ -262,7 +283,7 @@ on_close(uv_handle_t* handle) {
 
 static void
 broadcast(struct manager *mgr, const char *fmt, ...) {
-  char msg[512];
+  char msg[ALLOC_BUF_SIZE];
   va_list ap;
 
   va_start(ap, fmt);
@@ -270,6 +291,40 @@ broadcast(struct manager *mgr, const char *fmt, ...) {
   va_end(ap);
 
   iterate_members(mgr, g_unicast, msg, FALSE);
+}
+
+
+// for now this function assumes a fixed buffer length
+static void
+broadcast_buffer(struct manager *mgr, void *buf) {  
+  iterate_members(mgr, g_unicast, buf, FALSE);
+}
+
+
+static void
+broadcast_schedules(manager *mgr) {
+  /* set schedule && serialize payload for each member */
+  mgr->payload->type = SCHEDULE;
+  mgr->payload->is_important = 1;
+  mgr->payload->modulo = 0;
+
+  fill_member_schedules(mgr, NULL);
+  iterate_members(mgr, g_unicast_payload, mgr->payload->content, FALSE);
+  mgr->schedules_sent = TRUE;
+}
+
+
+static void
+g_unicast_payload(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  
+  char buf[ALLOC_BUF_SIZE];
+
+  /* copy member's schedule into manager's payload */
+  char *content = (char *)data; // memb->mgr->payload->content
+  memcpy(content, memb->schedule, sizeof(memb->schedule));
+  serialize_payload(memb->mgr->payload, buf, ALLOC_BUF_SIZE);
+  unicast(memb, buf);
 }
 
 
@@ -283,11 +338,11 @@ g_unicast(gpointer key, gpointer value, gpointer data) {
 
 static void
 unicast(struct member *memb, const char *msg) {
-  size_t len = strlen(msg);
-  uv_write_t *req = xb_malloc(sizeof(*req) + len);
+  // size_t len = strlen(msg);
+  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
   void *addr = req + 1;
-  memcpy(addr, msg, len);
-  uv_buf_t buf = uv_buf_init(addr, len);
+  memcpy(addr, msg, ALLOC_BUF_SIZE);
+  uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
   memb->message_processed = FALSE;
 }

@@ -29,6 +29,7 @@ typedef struct manager {
   GHashTable* members;
   int current_round;
   gboolean round_finished;
+  gboolean schedules_sent;
   sched_t modulo;
   payload *payload;
   uv_work_t work;
@@ -73,8 +74,14 @@ member_can_transmit(manager *mgr, member *memb);
 gboolean
 all_messages_processed(manager *mgr);
 
+gboolean
+all_members_present(manager *mgr);
+
 void
 g_message_processed(gpointer key, gpointer value, gpointer data);
+
+void
+g_member_present(gpointer key, gpointer value, gpointer data);
 
 void
 g_get_schedule_addr(gpointer key, gpointer value, gpointer data);
@@ -83,7 +90,7 @@ void
 calculate_modulo(manager *mgr);
 
 void
-fill_member_schedules(manager *mgr);
+fill_member_schedules(manager *mgr, sched_t **schedules);
 
 void
 assume_payload(manager *mgr, payload *pload);

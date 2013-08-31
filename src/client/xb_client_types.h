@@ -52,5 +52,20 @@ member_dispose(member *memb);
 void
 digest_broadcast(member *memb);
 
+void
+deserialize_payload(struct payload *pload, void *buf, size_t len);
+
+
+void
+process_schedule(member *memb, payload *pload);
+
+void
+process_ready(member *memb, payload *pload);
+
+void
+process_start(member *memb, payload *pload);
+
+void
+process_round(member *memb, payload *pload);
 
 #endif
