@@ -5,11 +5,16 @@
 #include <uv.h>
 
 #define CONTENT_SIZE 256
-#define SCHED_SIZE 100
+#define SCHED_SIZE CONTENT_SIZE / 2
 #define NAME_SIZE 32
 
+#define ALLOC_BUF_SIZE CONTENT_SIZE * 2
 
+#define do_callback(m) if (m->callback != NULL) m->callback(m)
+
+struct manager;
 typedef unsigned short sched_t;
+typedef void (*after_read_cb)(struct manager *);
 
 typedef enum {
   SCHEDULE, READY, START, ROUND
@@ -28,12 +33,19 @@ typedef struct manager {
 	guint member_count;
   GHashTable* members;
   int current_round;
+
+  /* flags */
   gboolean round_finished;
   gboolean schedules_sent;
+  gboolean chat_started;
+
   sched_t modulo;
   payload *payload;
   uv_work_t work;
   uv_mutex_t mutex;
+
+  after_read_cb callback;
+
 } manager;
 
 
@@ -42,8 +54,12 @@ typedef struct member {
   char name[NAME_SIZE];
   guint id;
   sched_t schedule[SCHED_SIZE];
+
+  /* flags */
   gboolean present;
+  gboolean schedule_delivered;
   gboolean message_processed;
+
   uv_tcp_t handle;
   uv_work_t work;
   uv_buf_t buf;
@@ -72,10 +88,13 @@ gboolean
 member_can_transmit(manager *mgr, member *memb);
 
 gboolean
-all_messages_processed(manager *mgr);
+all_members_present(manager *mgr);
 
 gboolean
-all_members_present(manager *mgr);
+all_schedules_delivered(manager *mgr);
+
+gboolean
+all_messages_processed(manager *mgr);
 
 void
 g_message_processed(gpointer key, gpointer value, gpointer data);
@@ -84,10 +103,19 @@ void
 g_member_present(gpointer key, gpointer value, gpointer data);
 
 void
+g_schedule_delivered(gpointer key, gpointer value, gpointer data);
+
+void
 g_get_schedule_addr(gpointer key, gpointer value, gpointer data);
 
 void
 calculate_modulo(manager *mgr);
+
+void
+reset_round(manager *mgr);
+
+void
+fill_start_payload(manager *mgr);
 
 void
 fill_member_schedules(manager *mgr, sched_t **schedules);

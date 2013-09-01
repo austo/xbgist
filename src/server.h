@@ -19,7 +19,7 @@ static void
 broadcast(manager *mgr, const char *fmt, ...);
 
 static void
-broadcast_buffer(struct manager *mgr, void *buf);
+broadcast_payload(manager *mgr);
 
 static void
 broadcast_schedules(manager *mgr);

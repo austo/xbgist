@@ -5,8 +5,12 @@
 #include <uv.h>
 
 #define CONTENT_SIZE 256
-#define SCHED_SIZE 100
+#define SCHED_SIZE CONTENT_SIZE / 2
 #define NAME_SIZE 32
+
+#define ALLOC_BUF_SIZE CONTENT_SIZE * 2
+
+#define do_callback(m) if (m->callback != NULL) m->callback(m)
 
 struct member;
 
@@ -29,7 +33,8 @@ typedef struct payload {
 typedef struct member {
   char name[NAME_SIZE];
   sched_t schedule[SCHED_SIZE];
-  gboolean message_processed;
+  payload *payload;
+  int current_round;
 
   /* uv types */
   uv_connect_t connection;
@@ -50,11 +55,10 @@ void
 member_dispose(member *memb);
 
 void
-digest_broadcast(member *memb);
+assume_payload(member *memb, payload *pload);
 
 void
-deserialize_payload(struct payload *pload, void *buf, size_t len);
-
+digest_broadcast(member *memb);
 
 void
 process_schedule(member *memb, payload *pload);
@@ -67,5 +71,9 @@ process_start(member *memb, payload *pload);
 
 void
 process_round(member *memb, payload *pload);
+
+payload *
+payload_new(payload_type type, int is_important, sched_t modulo, char *msg);
+
 
 #endif

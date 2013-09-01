@@ -10,7 +10,6 @@
 #include "xb_types.h"
 
 #define SERVER_ADDR "0.0.0.0" // a.k.a. "all interfaces"
-#define ALLOC_BUF_SIZE 512
 
 
 uv_loop_t *loop;
@@ -113,10 +112,7 @@ new_member_after(uv_work_t *req) {
     broadcast_schedules(memb->mgr);
   }
   uv_mutex_unlock(&memb->mgr->mutex);
-
-  // TODO: if all members have connected, send schedule
-  // broadcast(memb->mgr, "* %s joined from %s\n",
-  //  memb->name, addr_and_port(memb));
+  
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
 }
 
@@ -143,14 +139,7 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
     return;
   }
 
-  assert(memb->present);
-
-  /* TODO:
-   * does user have right to broadcast?
-   * does user want to broadcast?
-   * set buffer for group
-   * broadcast
-   */
+  assert(memb->present);  
 
   memb->buf = buf;
   memb->buf.len = nread;
@@ -194,6 +183,10 @@ read_work(uv_work_t *req) {
     }
   }
 
+  if (temp_pload != NULL) {
+    free(temp_pload);
+  }
+
   uv_mutex_unlock(&memb->mgr->mutex);
 }
 
@@ -201,15 +194,7 @@ read_work(uv_work_t *req) {
 static void 
 read_after(uv_work_t *req) {
   member *memb = (member*)req->data;
-
-  if (memb->mgr->round_finished) {
-    ++memb->mgr->current_round;
-    memb->mgr->round_finished = FALSE;
-  }
-
-  // TODO: diagnostic message based on type
-  fprintf(stdout, "Broadcast \"%.*s\" from %s.\n",
-    (int)(memb->buf.len - 1), memb->buf.base, memb->name);
+  do_callback(memb->mgr);  
 }
 
 
@@ -217,16 +202,30 @@ read_after(uv_work_t *req) {
 
 static void
 process_schedule(member *memb, payload *pload) {
+  /* TODO: implement as client schedule request */
   assert(0 == 1);
 }
+
 
 static void
 process_ready(member *memb, payload *pload) {
-  assert(0 == 1);
+  /* when all ready messages recieved, send start */
+
+  memb->schedule_delivered = TRUE;
+
+  if (all_schedules_delivered(memb->mgr)) {
+    fill_start_payload(memb->mgr);
+    broadcast_payload(memb->mgr);
+
+    memb->mgr->chat_started = TRUE;
+    memb->mgr->callback = NULL;
+  }
 }
+
 
 static void
 process_start(member *memb, payload *pload) {
+  /* as of now, client should not be sending this... */
   assert(0 == 1);
 }
 
@@ -235,27 +234,39 @@ process_start(member *memb, payload *pload) {
 static void
 process_round(member *memb, payload *pload) {
 
+  /* does user have right to broadcast?
+   * does user want to broadcast?
+   * set buffer for group
+   * broadcast
+   */
+
   if (member_can_transmit(memb->mgr, memb)) {
     assume_payload(memb->mgr, pload);
+
+    if (memb->mgr->payload->is_important) {
+      printf("%s says: %s\n", memb->name, memb->mgr->payload->content);
+    }
   }
   else {
     free(pload);
+    pload = NULL;
   }
 
   memb->message_processed = TRUE;
 
   if (all_messages_processed(memb->mgr)) {
+
     calculate_modulo(memb->mgr);
+    memb->mgr->payload->type = ROUND;    
 
-    memb->mgr->payload->type = ROUND;
-    char msg[ALLOC_BUF_SIZE] = {0};
-    serialize_payload(memb->mgr->payload, msg, ALLOC_BUF_SIZE);
+    broadcast_payload(memb->mgr);
 
-    // broadcast(memb->mgr, "%s said: %.*s", memb->name,
-    //   (int)memb->buf.len, memb->buf.base);
-
-    broadcast_buffer(memb->mgr, msg);
     memb->mgr->round_finished = TRUE;
+    memb->mgr->callback = reset_round;
+  }
+  else {
+    memb->mgr->round_finished = FALSE;
+    memb->mgr->callback = NULL;
   }
 }
 
@@ -294,10 +305,11 @@ broadcast(struct manager *mgr, const char *fmt, ...) {
 }
 
 
-// for now this function assumes a fixed buffer length
 static void
-broadcast_buffer(struct manager *mgr, void *buf) {  
-  iterate_members(mgr, g_unicast, buf, FALSE);
+broadcast_payload(manager *mgr) {
+  char msg[ALLOC_BUF_SIZE] = {0};
+  serialize_payload(mgr->payload, msg, ALLOC_BUF_SIZE);
+  iterate_members(mgr, g_unicast, msg, FALSE);
 }
 
 

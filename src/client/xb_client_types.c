@@ -6,22 +6,59 @@
 
 #include "tpl.h"
 #include "xb_client_types.h"
+#include "util.h"
+
+
+extern void
+write_payload(struct member *memb);
+
+
+payload *
+payload_new(
+  payload_type type, int is_important, sched_t modulo, char *msg) {
+  payload *pload = xb_malloc(sizeof(*pload));
+  pload->type = type;
+  pload->is_important = is_important;
+  pload->modulo = modulo;
+
+  if (msg == NULL) {
+    fill_random_msg(pload->content, CONTENT_SIZE);
+  }
+  else {
+    strcpy(pload->content, msg);
+  }
+  return pload;
+}
+
 
 member *
 member_new() {
-  member *memb = malloc(sizeof(*memb));
-  assert(memb != NULL);
-  memb->message_processed = FALSE;
+  member *memb = xb_malloc(sizeof(*memb));
   memb->work.data = memb;
   memb->client.data = memb;
   memb->connection.data = memb;
+  memb->payload = NULL;
+  memb->current_round = 0;
   return memb;  
 }
 
 
 void
 member_dispose(member *memb) {
+  if (memb->payload != NULL) {
+    free(memb->payload);
+  }
   free(memb);
+}
+
+
+void
+assume_payload(member *memb, payload *pload) {
+  if (memb->payload != NULL) {
+    free(memb->payload);
+  }
+  memb->payload = pload;
+  pload = NULL;
 }
 
 
@@ -54,28 +91,27 @@ digest_broadcast(member *memb) {
 
 
 void
-deserialize_payload(struct payload *pload, void *buf, size_t len) {
-  tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
-  tpl_load(tn, TPL_MEM|TPL_EXCESS_OK, buf, len);
-  tpl_unpack(tn, 0);
-  tpl_free(tn);
-}
-
-
-void
 process_schedule(member *memb, payload *pload) {
-  assert(0 == 1);
+  /* add schedule to member, respond with ready message */
+  memcpy(memb->schedule, pload->content, CONTENT_SIZE);
+
+  payload *temp_pload = payload_new(READY, 1, 0, NULL);
+  assume_payload(memb, temp_pload);
+  memb->callback = write_payload;
 }
 
 
 void
 process_ready(member *memb, payload *pload) {
+  // as of now, the server shouldn't be sending this...
   assert(0 == 1);
 }
 
 
 void
 process_start(member *memb, payload *pload) {
+  /* implement start chat: */
+
   assert(0 == 1);
 }
 
@@ -84,3 +120,4 @@ void
 process_round(member *memb, payload *pload) {
   assert(0 == 1);
 }
+

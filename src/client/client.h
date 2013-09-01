@@ -31,7 +31,4 @@ unicast(struct member *memb, const char *msg);
 void
 write_payload(struct member *memb);
 
-void *
-xb_malloc(size_t size);
-
 #endif

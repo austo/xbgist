@@ -70,19 +70,58 @@ fill_disjoint_arrays(
 
 
 void
-serialize_payload(struct payload *pload, void *buf, size_t len) {
-  tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
-  tpl_dump(tn, TPL_MEM|TPL_PREALLOCD, buf, len);
+fill_random_msg(char *buf, size_t maxlen) {
+  static const char alphanum[] =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+  static const size_t alen = sizeof(alphanum) - 1;
+
+  int rlen = simple_random(maxlen - 1), i = 0;
+  for (; i < rlen; ++i) {
+    buf[i] = alphanum[random() % alen];
+  }
+  buf[rlen] = '\0';
+
+  // clear remaining buffer
+  if (rlen < maxlen - 1) {
+    for (i = rlen + 1; i < maxlen; ++i) {
+      buf[i] = 0;
+    }
+  } 
+}
+
+
+void
+serialize_payload(struct payload *pload, void *to, size_t len) {
+  tpl_node *tn = tpl_map("S(iivc#)", pload, ALLOC_BUF_SIZE);
+  tpl_dump(tn, TPL_MEM|TPL_PREALLOCD, to, len);
   tpl_free(tn);
 }
 
 
 void
-deserialize_payload(struct payload *pload, void *buf, size_t len) {
-  tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
-  tpl_load(tn, TPL_MEM|TPL_EXCESS_OK, buf, len);
+deserialize_payload(struct payload *pload, void *from, size_t len) {
+  tpl_node *tn = tpl_map("S(iivc#)", pload, ALLOC_BUF_SIZE);
+  tpl_load(tn, TPL_MEM|TPL_EXCESS_OK, from, len);
   tpl_unpack(tn, 0);
   tpl_free(tn);
+}
+
+
+void
+fatal(const char *what) {
+  uv_err_t err = uv_last_error(uv_default_loop());
+  fprintf(stderr, "%s: %s\n", what, uv_strerror(err));
+  exit(1);
+}
+
+
+void *
+xb_malloc(size_t size) {
+  void *ptr = malloc(size);
+  assert(ptr != NULL);
+  return ptr;
 }
 
 
@@ -102,6 +141,7 @@ make_name(struct member *memb) {
     names[first_index], names[last_index]);  
 }
 
+#ifdef XBSERVER
 
 const char *
 addr_and_port(struct member *memb) {
@@ -120,18 +160,5 @@ addr_and_port(struct member *memb) {
   return buf;
 }
 
+#endif
 
-void
-fatal(const char *what) {
-  uv_err_t err = uv_last_error(uv_default_loop());
-  fprintf(stderr, "%s: %s\n", what, uv_strerror(err));
-  exit(1);
-}
-
-
-void *
-xb_malloc(size_t size) {
-  void *ptr = malloc(size);
-  assert(ptr != NULL);
-  return ptr;
-}

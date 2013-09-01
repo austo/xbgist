@@ -18,6 +18,8 @@ manager_new() {
   mgr->current_round = 0;
   mgr->round_finished = FALSE;
   mgr->schedules_sent = FALSE;
+  mgr->chat_started = FALSE;
+  mgr->callback = NULL;
   return mgr;
 }
 
@@ -83,12 +85,30 @@ all_messages_processed(manager *mgr) {
 }
 
 
+gboolean
+all_schedules_delivered(manager *mgr) {
+  gboolean retval = TRUE;
+  iterate_members(mgr, g_message_processed, &retval, FALSE);
+  return retval;
+}
+
+
 void
 g_message_processed(gpointer key, gpointer value, gpointer data) {
   member *memb = (member *)value;
   gboolean *processed = (gboolean *)data;
   if (*processed) {
     *processed = memb->message_processed;
+  }
+}
+
+
+void
+g_schedule_delivered(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  gboolean *delivered = (gboolean *)data;
+  if (*delivered) {
+    *delivered = memb->schedule_delivered;
   }
 }
 
@@ -118,6 +138,26 @@ g_member_present(gpointer key, gpointer value, gpointer data) {
 void
 calculate_modulo(manager *mgr) {
   mgr->payload->modulo = simple_random(mgr->member_count);
+}
+
+
+void
+reset_round(manager *mgr) {
+  if (mgr->round_finished) {
+    fprintf(stdout, "Round %d finished. ", mgr->current_round);
+    ++(mgr->current_round);
+    fprintf(stdout, "Incremented round to %d\n", mgr->current_round);
+    mgr->round_finished = FALSE;
+  }
+}
+
+
+void
+fill_start_payload(manager *mgr) {
+  mgr->payload->type = START;
+  mgr->payload->is_important = 1;
+  mgr->payload->modulo = 0;
+  fill_random_msg(mgr->payload->content, CONTENT_SIZE);
 }
 
 
@@ -181,4 +221,5 @@ void
 assume_payload(manager *mgr, payload *pload) {
   free(mgr->payload);
   mgr->payload = pload;
+  pload = NULL;
 }

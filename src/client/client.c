@@ -7,11 +7,9 @@
 
 #include "client.h"
 #include "xb_client_types.h"
+#include "util.h"
 
-#define do_callback(m) m->callback(m)
 #define MESSAGE_SIZE 256
-#define ALLOC_BUF_SIZE 512
-
 
 uv_loop_t *loop;
 
@@ -117,43 +115,8 @@ read_work(uv_work_t *r) {
 void
 read_after(uv_work_t *r) {
   member *memb = (member*)r->data;
-  if (memb->callback != NULL){
-    do_callback(memb);
-  }  
+  do_callback(memb);
 }
-
-
-// void
-// Client::onSendCredential(MemberBaton *baton) {
-//   int status = uv_queue_work(
-//     loop,
-//     &baton->uvWork,
-//     sendCredentialWork,
-//     (uv_after_work_cb)afterSendCredential);
-//   assert(status == 0);   
-// }
-
-
-// void
-// Client::sendCredentialWork(uv_work_t *r) {
-//   member *memb = (member*)r->data;
-//   baton->packageCredential();
-// }
-
-
-// void
-// Client::afterSendCredential(uv_work_t *r) {
-//   member *memb = (member*)r->data;
-//   baton->uvWriteCb = onWrite;
-
-//   uv_write(
-//     &baton->uvWrite,
-//     (uv_stream_t*)&baton->uvClient,
-//     &baton->uvBuf,
-//     1,
-//     baton->uvWriteCb
-//   );
-// }
 
 
 void
@@ -181,15 +144,8 @@ unicast(struct member *memb, const char *msg) {
 void
 write_payload(struct member *memb) {
   // allocate & serialize payload
-  char msg[MESSAGE_SIZE];
+  char msg[ALLOC_BUF_SIZE] = {0};
+  serialize_payload(memb->payload, msg, ALLOC_BUF_SIZE);
   unicast(memb, msg);
-}
-
-
-void *
-xb_malloc(size_t size) {
-  void *ptr = malloc(size);
-  assert(ptr != NULL);
-  return ptr;
 }
 

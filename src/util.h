@@ -23,10 +23,22 @@ void
 fill_disjoint_arrays(sched_t **schedules, size_t n_sched, size_t sched_len);
 
 void
+fill_random_msg(char *buf, size_t maxlen);
+
+void
 serialize_payload(struct payload *pload, void *buf, size_t len);
 
 void
 deserialize_payload(struct payload *pload, void *buf, size_t len);
+
+void
+fatal(const char *what);
+
+void *
+xb_malloc(size_t size);
+
+
+#ifdef XBSERVER
 
 void
 make_name(struct member *memb);
@@ -34,10 +46,7 @@ make_name(struct member *memb);
 const char *
 addr_and_port(struct member *memb);
 
-void
-fatal(const char *what);
+#endif
 
-void *
-xb_malloc(size_t size);
 
 #endif
