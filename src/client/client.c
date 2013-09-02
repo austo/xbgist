@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include <uv.h>
@@ -8,17 +9,28 @@
 #include "client.h"
 #include "xb_client_types.h"
 #include "util.h"
+#include "sentence_util.h"
+
 
 #define MESSAGE_SIZE 256
 
 uv_loop_t *loop;
+char *sentence_file;
 
 int
 main(int argc, char **argv) {
 
-  if (argc != 3){
-    fprintf(stderr, "usage: %s port\n", argv[0]);
+  if (argc < 3 || argc > 4){
+    fprintf(stderr, "usage: %s <server> <port> (<sentence_file>)\n", argv[0]);
     return 1;
+  }
+
+  if (argc == 4) {
+    sentence_file = strdup(argv[3]);
+    init_sentences(sentence_file);
+  }
+  else {
+    sentence_file = NULL;
   }
 
   int port = atoi(argv[2]);
@@ -147,5 +159,8 @@ write_payload(struct member *memb) {
   char msg[ALLOC_BUF_SIZE] = {0};
   serialize_payload(memb->payload, msg, ALLOC_BUF_SIZE);
   unicast(memb, msg);
+  if (memb->payload->type == ROUND) {
+    ++memb->current_round;
+  }
 }
 

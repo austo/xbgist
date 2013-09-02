@@ -72,8 +72,21 @@ process_start(member *memb, payload *pload);
 void
 process_round(member *memb, payload *pload);
 
+int
+flip_coin();
+
+void
+display_message(payload *pload);
+
 payload *
-payload_new(payload_type type, int is_important, sched_t modulo, char *msg);
+payload_new(
+  payload_type type,
+  int is_important, sched_t modulo, char *msg);
+
+void
+payload_set(
+  payload *pload, payload_type type,
+  int is_important, sched_t modulo, char *msg);
 
 
 #endif

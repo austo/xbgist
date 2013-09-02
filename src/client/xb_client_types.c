@@ -7,6 +7,7 @@
 #include "tpl.h"
 #include "xb_client_types.h"
 #include "util.h"
+#include "sentence_util.h"
 
 
 extern void
@@ -31,6 +32,24 @@ payload_new(
 }
 
 
+void
+payload_set(
+  payload *pload, payload_type type,
+  int is_important, sched_t modulo, char *msg) {
+
+  pload->type = type;
+  pload->is_important = is_important;
+  pload->modulo = modulo;
+
+  if (msg == NULL) {
+    fill_random_msg(pload->content, CONTENT_SIZE);
+  }
+  else {
+    strcpy(pload->content, msg);
+  }
+}
+
+
 member *
 member_new() {
   member *memb = xb_malloc(sizeof(*memb));
@@ -49,6 +68,7 @@ member_dispose(member *memb) {
     free(memb->payload);
   }
   free(memb);
+  memb = NULL;
 }
 
 
@@ -62,10 +82,23 @@ assume_payload(member *memb, payload *pload) {
 }
 
 
+int
+flip_coin() {
+  return simple_random(USHRT_MAX) % 2;
+}
+
+
+void
+display_message(payload *pload) {
+  if (pload->type != ROUND || !pload->is_important) { return; }
+  printf("%s\n", pload->content);
+}
+
+
 void
 digest_broadcast(member *memb) {
-	/* deserialize payload */
-	payload pload;
+  /* deserialize payload */
+  payload pload;
   deserialize_payload(&pload, &memb->buf.base, memb->buf.len);
 
   switch(pload.type) {
@@ -77,10 +110,7 @@ digest_broadcast(member *memb) {
       process_ready(memb, &pload);
       break;
     }
-    case START: {
-      process_start(memb, &pload);
-      break;
-    }
+    case START:
     case ROUND: {
       process_round(memb, &pload);
       break;
@@ -110,7 +140,7 @@ process_ready(member *memb, payload *pload) {
 
 void
 process_start(member *memb, payload *pload) {
-  /* implement start chat: */
+  /* can actually call process_round */
 
   assert(0 == 1);
 }
@@ -118,6 +148,23 @@ process_start(member *memb, payload *pload) {
 
 void
 process_round(member *memb, payload *pload) {
-  assert(0 == 1);
+  assert(memb->payload != NULL);
+
+  /* 1. is it my turn?
+   * 2. do I have anything to say?
+   * 3. build payload
+   * 4. send & set callback
+   */
+
+
+  if (memb->schedule[memb->current_round] == pload->modulo) {
+    int important = flip_coin();
+    payload_set(memb->payload, ROUND, important, 0,
+      important ? get_sentence() : NULL);
+  }
+  else {
+    payload_set(memb->payload, ROUND, 0, 0, NULL);
+  }
+  memb->callback = write_payload;
 }
 

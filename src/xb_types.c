@@ -30,6 +30,7 @@ manager_dispose(manager *mgr) {
   uv_mutex_destroy(&mgr->mutex);
   free(mgr->payload);
   free(mgr);
+  mgr = NULL;
 }
 
 
@@ -206,6 +207,7 @@ member_new() {
 void
 member_dispose(member *memb) {
   free(memb);
+  memb = NULL;
 }
 
 

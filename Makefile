@@ -17,7 +17,7 @@ SERVER_SRCS = $(SOURCE_DIR)/server.c $(SOURCE_DIR)/xb_types.c
 
 CLIENT_SRCS = $(CLIENT_DIR)/client.c $(CLIENT_DIR)/xb_client_types.c
 
-COMMON_SRCS = $(SOURCE_DIR)/util.c
+COMMON_SRCS = $(SOURCE_DIR)/util.c $(SOURCE_DIR)/sentence_util.c
 
 DEPS_SRCS = $(DEPS_DIR)/tpl.c
 
