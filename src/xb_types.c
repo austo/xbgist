@@ -68,7 +68,9 @@ remove_member(manager *mgr, guint memb_id) {
 
 gboolean
 has_room(manager *mgr) {
-  return g_hash_table_size(mgr->members) < mgr->member_count ? TRUE : FALSE;
+  guint tsize = g_hash_table_size(mgr->members);
+  fprintf(stdout, "g_hash_table_size: %d\n", tsize);
+  return tsize < mgr->member_count ? TRUE : FALSE;
 }
 
 

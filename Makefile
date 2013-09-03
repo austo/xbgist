@@ -21,6 +21,8 @@ COMMON_SRCS = $(SOURCE_DIR)/util.c $(SOURCE_DIR)/sentence_util.c
 
 DEPS_SRCS = $(DEPS_DIR)/tpl.c
 
+TEST_SRCS = $(TEST_DIR)/harness.c
+
 
 SERVER_OBJS = $(SERVER_SRCS:.c=.o)
 
@@ -30,12 +32,14 @@ COMMON_OBJS = $(COMMON_SRCS:.c=.o)
 
 DEPS_OBJS = $(DEPS_SRCS:.c=.o)
 
+TEST_OBJS = $(TEST_SRCS:.c=.o)
+
 
 .PHONY: all clean
 
 server:	CFLAGS += -D XBSERVER=1
 
-all:	  server  client
+all:	  server  client  harness
 
 clean:
 	rm -f out/* *.o core
@@ -52,9 +56,14 @@ $(notdir $(DEPS_OBJS)): $(DEPS_SRCS)
 $(notdir $(COMMON_OBJS)): $(COMMON_SRCS)
 	$(CC) -c -g $(CFLAGS) $(COMMON_SRCS)
 
+$(notdir $(TEST_OBJS)): $(TEST_SRCS)
+	$(CC) -c -g $(CFLAGS) $(TEST_SRCS)
 
 server:	$(notdir $(SERVER_OBJS)) $(notdir $(COMMON_OBJS)) $(notdir $(DEPS_OBJS))
 	$(CC) $^ -o out/$@ $(LDFLAGS)
 
 client: $(notdir $(CLIENT_OBJS)) $(notdir $(COMMON_OBJS)) $(notdir $(DEPS_OBJS))
+	$(CC) $^ -o out/$@ $(LDFLAGS)
+
+harness: $(notdir $(TEST_OBJS))
 	$(CC) $^ -o out/$@ $(LDFLAGS)

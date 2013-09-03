@@ -56,6 +56,9 @@ read_after(uv_work_t *req);
 
 
 static void
+process_welcome(member *memb, payload *pload);
+
+static void
 process_schedule(member *memb, payload *pload);
 
 static void

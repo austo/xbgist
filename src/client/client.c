@@ -21,7 +21,7 @@ int
 main(int argc, char **argv) {
 
   if (argc < 3 || argc > 4){
-    fprintf(stderr, "usage: %s <server> <port> (<sentence_file>)\n", argv[0]);
+    fprintf(stderr, "usage: %s <hostname> <port> (<sentence_file>)\n", argv[0]);
     return 1;
   }
 
@@ -49,7 +49,9 @@ main(int argc, char **argv) {
     on_connect
   );
 
-  assert(status == 0);
+  if (status) {
+    fatal("could not connect to server");
+  }
 
   return uv_run(loop, UV_RUN_DEFAULT);
 }
@@ -68,8 +70,9 @@ on_alloc(uv_handle_t* handle, size_t suggested_size) {
   /* Return buffer wrapping static buffer
    * TODO: assert on_read() allocations never overlap
   */
-  static char buf[ALLOC_BUF_SIZE];
-  return uv_buf_init(buf, sizeof(buf));
+  return uv_buf_init((char *)xb_malloc(suggested_size), suggested_size);
+  // static char buf[ALLOC_BUF_SIZE];
+  // return uv_buf_init(buf, sizeof(buf));
 }
 
 
@@ -80,6 +83,8 @@ on_connect(uv_connect_t *req, int status) {
       uv_err_name(uv_last_error(loop)));
     return;
   }
+
+  printf("inside on_connect\n");
 
   member *memb = (member*)req->data;
   memb->server = req->handle;
@@ -97,11 +102,14 @@ on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
         uv_err_name(uv_last_error(loop)));
     }
   }
+
+  printf("inside on_read\n");
   
   member *memb = (member*)server->data;
 
   if (nread == EOF){
     uv_close((uv_handle_t*)memb->server, on_close);
+    fprintf(stderr, "nothing read\n");
     return;
   }
 

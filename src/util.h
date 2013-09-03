@@ -28,6 +28,9 @@ fill_random_msg(char *buf, size_t maxlen);
 void
 serialize_payload(struct payload *pload, void *buf, size_t len);
 
+size_t
+serialize_payload_exact(struct payload *pload, void *to);
+
 void
 deserialize_payload(struct payload *pload, void *buf, size_t len);
 

@@ -52,10 +52,14 @@ payload_set(
 
 member *
 member_new() {
-  member *memb = xb_malloc(sizeof(*memb));
+
+  // member *memb = xb_malloc(sizeof(*memb));
+  member *memb = calloc(1, sizeof(*memb));
+  assert(memb != NULL);
   memb->work.data = memb;
   memb->client.data = memb;
   memb->connection.data = memb;
+  memb->write.data = memb;
   memb->payload = NULL;
   memb->current_round = 0;
   return memb;  
@@ -99,9 +103,19 @@ void
 digest_broadcast(member *memb) {
   /* deserialize payload */
   payload pload;
+
+  printf("payload memb->buf.len: %d\n",  memb->buf.len);
+
+  printf("payload memb->buf.base: %.*s\n",
+    (int)(memb->buf.len - 1), memb->buf.base);
+
   deserialize_payload(&pload, &memb->buf.base, memb->buf.len);
 
   switch(pload.type) {
+    case WELCOME: {
+      printf("%s\n", pload.content);
+      break; 
+    }
     case SCHEDULE: {
       process_schedule(memb, &pload);
       break;

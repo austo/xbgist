@@ -18,7 +18,7 @@ typedef unsigned short sched_t;
 typedef void (*after_read_cb)(struct member *);
 
 typedef enum {
-  SCHEDULE, READY, START, ROUND
+  WELCOME, SCHEDULE, READY, START, ROUND
 } payload_type;
 
 
@@ -41,6 +41,8 @@ typedef struct member {
   uv_stream_t *server;
   uv_tcp_t client;
   uv_work_t work;
+  uv_write_t write;
+
   uv_buf_t buf;
 
   after_read_cb callback;

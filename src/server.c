@@ -11,6 +11,7 @@
 
 #define SERVER_ADDR "0.0.0.0" // a.k.a. "all interfaces"
 
+#define N_TEST_MEMBERS 5
 
 uv_loop_t *loop;
 manager *xb_manager;
@@ -28,6 +29,7 @@ main(int argc, char** argv) {
   int s_port = atoi(argv[1]);
 
   xb_manager = manager_new();
+  xb_manager->member_count = N_TEST_MEMBERS;
 
   uv_mutex_init(&xb_mutex);
 
@@ -90,7 +92,25 @@ new_member_work(uv_work_t *req) {
   if (has_room(xb_manager)) {
     memb->id = g_hash_table_size(xb_manager->members) + 1;
     make_name(memb);
+    fprintf(stdout, "adding %s to group\n", memb->name);
+
     insert_member(xb_manager, memb->id, memb);
+
+    payload pload;
+    pload.type = WELCOME;
+    pload.is_important = 1;
+    pload.modulo = 0;
+    strcpy(pload.content, "welcome to the punch");
+
+    // char buf[ALLOC_BUF_SIZE];
+    // serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
+
+    void *buf;
+    size_t buflen = serialize_payload_exact(&pload, buf);
+
+    printf("payload: %.*s\n", (int)buflen - 1, (char *)buf);
+
+    unicast(memb, (char *)buf);
   }
 
   uv_mutex_unlock(&xb_mutex);
@@ -165,6 +185,9 @@ read_work(uv_work_t *req) {
   deserialize_payload(temp_pload, &memb->buf, memb->buf.len);
 
   switch(temp_pload->type) {
+    case WELCOME: {
+      process_welcome(memb, temp_pload);
+    }
     case SCHEDULE: {
       process_schedule(memb, temp_pload);
       break;
@@ -180,7 +203,7 @@ read_work(uv_work_t *req) {
     case ROUND: {
       process_round(memb, temp_pload);
       break;
-    }
+    }    
   }
 
   if (temp_pload != NULL) {
@@ -199,6 +222,12 @@ read_after(uv_work_t *req) {
 
 
 /* ROUND WORK FUNCTIONS */
+
+static void
+process_welcome(member *memb, payload *pload) {
+  /* as of now, client should not be sending this... */
+  assert(0 == 1);
+}
 
 static void
 process_schedule(member *memb, payload *pload) {
@@ -228,7 +257,6 @@ process_start(member *memb, payload *pload) {
   /* as of now, client should not be sending this... */
   assert(0 == 1);
 }
-
 
 
 static void
@@ -351,7 +379,7 @@ g_unicast(gpointer key, gpointer value, gpointer data) {
 static void
 unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);
-  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
+  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE + 1);
   void *addr = req + 1;
   memcpy(addr, msg, ALLOC_BUF_SIZE);
   uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);

@@ -17,7 +17,7 @@ typedef unsigned short sched_t;
 typedef void (*after_read_cb)(struct manager *);
 
 typedef enum {
-  SCHEDULE, READY, START, ROUND
+  WELCOME, SCHEDULE, READY, START, ROUND
 } payload_type;
 
 
