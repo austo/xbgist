@@ -136,6 +136,17 @@ void
 read_after(uv_work_t *r) {
   member *memb = (member*)r->data;
   do_callback(memb);
+
+
+  /* TODO:
+   * assume_buffer
+   * buffer_dispose
+   */
+  if (memb->buf.base != NULL) {
+    free(memb->buf.base);
+    memb->buf.base = NULL;
+    memb->buf.len = 0;
+  }
 }
 
 

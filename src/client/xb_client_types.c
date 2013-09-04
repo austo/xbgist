@@ -62,6 +62,8 @@ member_new() {
   memb->write.data = memb;
   memb->payload = NULL;
   memb->current_round = 0;
+  memb->buf.base = NULL;
+  memb->buf.len = 0;
   return memb;  
 }
 

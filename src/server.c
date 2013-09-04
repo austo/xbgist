@@ -105,16 +105,8 @@ new_member_work(uv_work_t *req) {
     pload.modulo = 0;
     fill_random_msg(pload.content, CONTENT_SIZE);
 
-    char *buf = xb_malloc(ALLOC_BUF_SIZE);
+    char buf[ALLOC_BUF_SIZE];
     serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
-
-    // void *buf = NULL;
-    // size_t buflen = serialize_payload_exact(&pload, buf);
-    // assert (buf != NULL);
-
-    // printf("payload: %.*s\n", ALLOC_BUF_SIZE - 1, buf);
-
-    // printf("payload: %.*s\n", (int)buflen - 1, (char *)buf);
 
     unicast(memb, (char *)buf);
   }
@@ -145,11 +137,6 @@ new_member_after(uv_work_t *req, int status) {
 
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size) {
-  /* Return buffer wrapping static buffer
-   * TODO: assert on_read() allocations never overlap
-  */
-  // static char buf[ALLOC_BUF_SIZE];
-  // return uv_buf_init(buf, sizeof(buf));
   return uv_buf_init(xb_malloc(suggested_size), suggested_size);
 }
 
