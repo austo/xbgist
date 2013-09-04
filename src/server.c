@@ -84,7 +84,10 @@ new_member_work(uv_work_t *req) {
   member *memb = (member*)req->data;
 
   // add user to the list
-  if (!has_room(xb_manager)) { return; }
+  if (!has_room(xb_manager)) { 
+    printf("no room in the chat\n");
+    return;
+  }
 
   uv_mutex_lock(&xb_mutex);
 
@@ -102,14 +105,14 @@ new_member_work(uv_work_t *req) {
     pload.modulo = 0;
     fill_random_msg(pload.content, CONTENT_SIZE);
 
-    char buf[ALLOC_BUF_SIZE];
-    serialize_payload(&pload, (void *)buf, ALLOC_BUF_SIZE);
+    char *buf = xb_malloc(ALLOC_BUF_SIZE);
+    serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
 
     // void *buf = NULL;
     // size_t buflen = serialize_payload_exact(&pload, buf);
     // assert (buf != NULL);
 
-    printf("payload: %.*s\n", ALLOC_BUF_SIZE - 1, buf);
+    // printf("payload: %.*s\n", ALLOC_BUF_SIZE - 1, buf);
 
     // printf("payload: %.*s\n", (int)buflen - 1, (char *)buf);
 
@@ -145,8 +148,9 @@ on_alloc(uv_handle_t* handle, size_t suggested_size) {
   /* Return buffer wrapping static buffer
    * TODO: assert on_read() allocations never overlap
   */
-  static char buf[ALLOC_BUF_SIZE];
-  return uv_buf_init(buf, sizeof(buf));
+  // static char buf[ALLOC_BUF_SIZE];
+  // return uv_buf_init(buf, sizeof(buf));
+  return uv_buf_init(xb_malloc(suggested_size), suggested_size);
 }
 
 
@@ -382,9 +386,9 @@ g_unicast(gpointer key, gpointer value, gpointer data) {
 static void
 unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);
-  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE + 1);
+  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
   void *addr = req + 1;
-  memcpy(addr, msg, ALLOC_BUF_SIZE);  
+  memcpy(addr, &msg[0], ALLOC_BUF_SIZE);  
   uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
   memb->message_processed = FALSE;

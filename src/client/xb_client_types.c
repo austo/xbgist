@@ -109,7 +109,7 @@ digest_broadcast(member *memb) {
   printf("payload memb->buf.base: %.*s\n",
     (int)(memb->buf.len - 1), memb->buf.base);
 
-  deserialize_payload(&pload, &memb->buf.base, memb->buf.len);
+  deserialize_payload(&pload, memb->buf.base, memb->buf.len);
 
   switch(pload.type) {
     case WELCOME: {
@@ -130,7 +130,6 @@ digest_broadcast(member *memb) {
       break;
     }
   }
-
 }
 
 

@@ -70,7 +70,7 @@ on_alloc(uv_handle_t* handle, size_t suggested_size) {
   /* Return buffer wrapping static buffer
    * TODO: assert on_read() allocations never overlap
   */
-  return uv_buf_init((char *)xb_malloc(suggested_size), suggested_size);
+  return uv_buf_init(xb_malloc(suggested_size), suggested_size);
   // static char buf[ALLOC_BUF_SIZE];
   // return uv_buf_init(buf, sizeof(buf));
 }

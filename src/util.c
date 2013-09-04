@@ -84,11 +84,11 @@ fill_random_msg(char *buf, size_t maxlen) {
   buf[rlen] = '\0';
 
   // clear remaining buffer
-  if (rlen < maxlen - 1) {
-    for (i = rlen + 1; i < maxlen; ++i) {
-      buf[i] = 0;
-    }
-  } 
+  // if (rlen < maxlen - 1) {
+  //   for (i = rlen + 1; i < maxlen; ++i) {
+  //     buf[i] = 0;
+  //   }
+  // } 
 }
 
 
