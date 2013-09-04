@@ -94,7 +94,11 @@ fill_random_msg(char *buf, size_t maxlen) {
 
 void
 serialize_payload(struct payload *pload, void *to, size_t len) {
+  printf("serializing payload\n");
+  printf("%s\n", pload->content);
+
   tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
+  tpl_pack(tn, 0);
   tpl_dump(tn, TPL_MEM|TPL_PREALLOCD, to, len);
   tpl_free(tn);
 }
@@ -104,6 +108,7 @@ size_t
 serialize_payload_exact(struct payload *pload, void *to) {
   size_t len;
   tpl_node *tn = tpl_map("S(iivc#)", pload, CONTENT_SIZE);
+  tpl_pack(tn, 0);
   tpl_dump(tn, TPL_MEM, to, &len);
   tpl_free(tn);
   return len;

@@ -100,15 +100,18 @@ new_member_work(uv_work_t *req) {
     pload.type = WELCOME;
     pload.is_important = 1;
     pload.modulo = 0;
-    strcpy(pload.content, "welcome to the punch");
+    fill_random_msg(pload.content, CONTENT_SIZE);
 
-    // char buf[ALLOC_BUF_SIZE];
-    // serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
+    char buf[ALLOC_BUF_SIZE];
+    serialize_payload(&pload, (void *)buf, ALLOC_BUF_SIZE);
 
-    void *buf;
-    size_t buflen = serialize_payload_exact(&pload, buf);
+    // void *buf = NULL;
+    // size_t buflen = serialize_payload_exact(&pload, buf);
+    // assert (buf != NULL);
 
-    printf("payload: %.*s\n", (int)buflen - 1, (char *)buf);
+    printf("payload: %.*s\n", ALLOC_BUF_SIZE - 1, buf);
+
+    // printf("payload: %.*s\n", (int)buflen - 1, (char *)buf);
 
     unicast(memb, (char *)buf);
   }
@@ -118,7 +121,7 @@ new_member_work(uv_work_t *req) {
 
 
 static void 
-new_member_after(uv_work_t *req) {
+new_member_after(uv_work_t *req, int status) {
   member *memb = (member*)req->data;
 
   /* disconnect unwelcome members */
@@ -215,7 +218,7 @@ read_work(uv_work_t *req) {
 
 
 static void 
-read_after(uv_work_t *req) {
+read_after(uv_work_t *req, int status) {
   member *memb = (member*)req->data;
   do_callback(memb->mgr);  
 }
@@ -381,7 +384,7 @@ unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);
   uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE + 1);
   void *addr = req + 1;
-  memcpy(addr, msg, ALLOC_BUF_SIZE);
+  memcpy(addr, msg, ALLOC_BUF_SIZE);  
   uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
   memb->message_processed = FALSE;

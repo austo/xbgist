@@ -11,7 +11,7 @@ char *client = "client";
 
 
 static void
-on_exit(uv_process_t *req, int exit_status, int term_signal) {
+on_proc_exit(uv_process_t *req, int exit_status, int term_signal) {
     fprintf(stderr, "Process exited with status %d, signal %d\n",
       exit_status, term_signal);
     uv_close((uv_handle_t*) req, NULL);
@@ -34,7 +34,7 @@ main(int argc, char **argv) {
   args[3] = argv[3];
   args[4] = NULL;
 
-  options.exit_cb = on_exit;
+  options.exit_cb = on_proc_exit;
   options.file = client;
   options.args = args;
 

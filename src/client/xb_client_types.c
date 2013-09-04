@@ -104,7 +104,7 @@ digest_broadcast(member *memb) {
   /* deserialize payload */
   payload pload;
 
-  printf("payload memb->buf.len: %d\n",  memb->buf.len);
+  printf("payload memb->buf.len: %d\n",  (int)memb->buf.len);
 
   printf("payload memb->buf.base: %.*s\n",
     (int)(memb->buf.len - 1), memb->buf.base);

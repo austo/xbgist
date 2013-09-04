@@ -43,13 +43,13 @@ static void
 new_member_work(uv_work_t *req);
 
 static void 
-new_member_after(uv_work_t *req);
+new_member_after(uv_work_t *req, int status);
 
 static void
 read_work(uv_work_t *req);
 
 static void 
-read_after(uv_work_t *req);
+read_after(uv_work_t *req, int status);
 
 
 /*--------------------------------------------------*/
