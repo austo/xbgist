@@ -52,7 +52,7 @@ void
 fill_disjoint_arrays(
   sched_t **schedules, size_t n_sched, size_t sched_len) {
 
-  srandom(time(NULL));
+  // srandom(time(NULL));
 
   size_t i, j;
 

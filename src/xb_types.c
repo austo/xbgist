@@ -222,8 +222,64 @@ g_member_dispose(gpointer data) {
 
 
 void
+assume_buffer(member *memb, void *base, size_t len) {
+  if (memb->buf.base != NULL) {
+    free(memb->buf.base);
+  }
+  memb->buf.base = base;
+  memb->buf.len = len;
+}
+
+
+void
+buffer_dispose(member *memb) {
+  if (memb->buf.base != NULL) {
+    free(memb->buf.base);
+    memb->buf.base = NULL;
+  }
+  memb->buf.len = 0;
+}
+
+
+void
 assume_payload(manager *mgr, payload *pload) {
   free(mgr->payload);
   mgr->payload = pload;
   pload = NULL;
+}
+
+
+payload *
+payload_new(
+  payload_type type, int is_important, sched_t modulo, char *msg) {
+  payload *pload = xb_malloc(sizeof(*pload));
+  pload->type = type;
+  pload->is_important = is_important;
+  pload->modulo = modulo;
+
+  if (msg == NULL) {
+    fill_random_msg(pload->content, CONTENT_SIZE);
+  }
+  else {
+    strcpy(pload->content, msg);
+  }
+  return pload;
+}
+
+
+void
+payload_set(
+  payload *pload, payload_type type,
+  int is_important, sched_t modulo, char *msg) {
+
+  pload->type = type;
+  pload->is_important = is_important;
+  pload->modulo = modulo;
+
+  if (msg == NULL) {
+    fill_random_msg(pload->content, CONTENT_SIZE);
+  }
+  else {
+    strcpy(pload->content, msg);
+  }
 }

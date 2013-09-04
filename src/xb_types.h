@@ -132,5 +132,20 @@ member_dispose(member *memb);
 void
 g_member_dispose(gpointer data);
 
+void
+assume_buffer(member *memb, void *base, size_t len);
+
+void
+buffer_dispose(member *memb);
+
+payload *
+payload_new(
+  payload_type type,
+  int is_important, sched_t modulo, char *msg);
+
+void
+payload_set(
+  payload *pload, payload_type type,
+  int is_important, sched_t modulo, char *msg);
 
 #endif

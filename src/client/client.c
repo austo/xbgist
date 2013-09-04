@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 
 #include <uv.h>
@@ -24,6 +25,9 @@ main(int argc, char **argv) {
     fprintf(stderr, "usage: %s <hostname> <port> (<sentence_file>)\n", argv[0]);
     return 1;
   }
+
+  /* initialize rng for sentences & filler */
+  srandom(time(NULL));
 
   if (argc == 4) {
     sentence_file = strdup(argv[3]);
@@ -66,13 +70,8 @@ on_close(uv_handle_t* handle) {
 
 
 static uv_buf_t
-on_alloc(uv_handle_t* handle, size_t suggested_size) {
-  /* Return buffer wrapping static buffer
-   * TODO: assert on_read() allocations never overlap
-  */
-  return uv_buf_init(xb_malloc(suggested_size), suggested_size);
-  // static char buf[ALLOC_BUF_SIZE];
-  // return uv_buf_init(buf, sizeof(buf));
+on_alloc(uv_handle_t* handle, size_t suggested_size) {  
+  return uv_buf_init(xb_malloc(suggested_size), suggested_size);  
 }
 
 
@@ -113,8 +112,7 @@ on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
     return;
   }
 
-  memb->buf = buf;
-  memb->buf.len = nread;
+  assume_buffer(memb, buf.base, nread);
 
   int status = uv_queue_work(
     loop,
@@ -137,16 +135,7 @@ read_after(uv_work_t *r) {
   member *memb = (member*)r->data;
   do_callback(memb);
 
-
-  /* TODO:
-   * assume_buffer
-   * buffer_dispose
-   */
-  if (memb->buf.base != NULL) {
-    free(memb->buf.base);
-    memb->buf.base = NULL;
-    memb->buf.len = 0;
-  }
+  buffer_dispose(memb);
 }
 
 

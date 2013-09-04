@@ -87,6 +87,25 @@ assume_payload(member *memb, payload *pload) {
   pload = NULL;
 }
 
+void
+assume_buffer(member *memb, void *base, size_t len) {
+  if (memb->buf.base != NULL) {
+    free(memb->buf.base);
+  }
+  memb->buf.base = base;
+  memb->buf.len = len;
+}
+
+
+void
+buffer_dispose(member *memb) {
+  if (memb->buf.base != NULL) {
+    free(memb->buf.base);
+    memb->buf.base = NULL;
+  }
+  memb->buf.len = 0;
+}
+
 
 int
 flip_coin() {

@@ -55,7 +55,7 @@ init_sentences(char *fname) {
   int new_lines[MAX_LINES];
   current_index = 0;
 
-  srandom(time(NULL));
+  // srandom(time(NULL));
 
   FILE *f = fopen(fname, "r");
 

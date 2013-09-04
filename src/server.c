@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 #include <unistd.h>
 
@@ -25,6 +26,9 @@ main(int argc, char** argv) {
     fprintf(stderr, "usage: %s port\n", argv[0]);
     return 1;
   }
+
+  /* initialize rng for sentences & filler */
+  srandom(time(NULL));
 
   int s_port = atoi(argv[1]);
 
@@ -100,15 +104,16 @@ new_member_work(uv_work_t *req) {
     insert_member(xb_manager, memb->id, memb);
 
     payload pload;
-    pload.type = WELCOME;
-    pload.is_important = 1;
-    pload.modulo = 0;
-    fill_random_msg(pload.content, CONTENT_SIZE);
+    payload_set(&pload, WELCOME, 1, 0, NULL);
+    // pload.type = WELCOME;
+    // pload.is_important = 1;
+    // pload.modulo = 0;
+    // fill_random_msg(pload.content, CONTENT_SIZE);
 
     char buf[ALLOC_BUF_SIZE];
     serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
 
-    unicast(memb, (char *)buf);
+    unicast(memb, buf);
   }
 
   uv_mutex_unlock(&xb_mutex);
@@ -155,8 +160,7 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 
   assert(memb->present);  
 
-  memb->buf = buf;
-  memb->buf.len = nread;
+  assume_buffer(memb, buf.base, nread);  
 
   int status = uv_queue_work(
     loop,
@@ -172,11 +176,12 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 static void
 read_work(uv_work_t *req) {
   member *memb = (member*)req->data;
+
   uv_mutex_lock(&memb->mgr->mutex);
 
   payload *temp_pload = xb_malloc(sizeof(*temp_pload));
 
-  deserialize_payload(temp_pload, &memb->buf, memb->buf.len);
+  deserialize_payload(temp_pload, memb->buf.base, memb->buf.len);
 
   switch(temp_pload->type) {
     case WELCOME: {
@@ -211,7 +216,9 @@ read_work(uv_work_t *req) {
 static void 
 read_after(uv_work_t *req, int status) {
   member *memb = (member*)req->data;
-  do_callback(memb->mgr);  
+  do_callback(memb->mgr);
+
+  buffer_dispose(memb); 
 }
 
 

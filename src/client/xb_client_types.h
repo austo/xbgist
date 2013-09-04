@@ -60,6 +60,12 @@ void
 assume_payload(member *memb, payload *pload);
 
 void
+assume_buffer(member *memb, void *base, size_t len);
+
+void
+buffer_dispose(member *memb);
+
+void
 digest_broadcast(member *memb);
 
 void

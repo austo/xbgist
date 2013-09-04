@@ -11,3 +11,4 @@ out/*
 deps/*
 scraps/*
 .tags
+core
