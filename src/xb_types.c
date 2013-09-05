@@ -19,7 +19,6 @@ manager_new() {
   mgr->round_finished = FALSE;
   mgr->schedules_sent = FALSE;
   mgr->chat_started = FALSE;
-  mgr->callback = NULL;
   return mgr;
 }
 
@@ -225,7 +224,7 @@ g_member_dispose(gpointer data) {
 void
 assume_buffer(member *memb, void *base, size_t len) {
   if (memb->buf.base != NULL) {
-    printf("assume_buffer: freeing buf.base for %s\n", memb->name);
+    // printf("assume_buffer: freeing buf.base for %s\n", memb->name);
     free(memb->buf.base);
   }
   memb->buf.base = base;
@@ -235,9 +234,9 @@ assume_buffer(member *memb, void *base, size_t len) {
 
 void
 buffer_dispose(member *memb) {
-  printf("buffer_dispose for %s\n", memb->name);
+  // printf("buffer_dispose for %s\n", memb->name);
   if (memb->buf.base != NULL) {
-    printf("freeing buf.base for %s\n", memb->name);
+    // printf("freeing buf.base for %s\n", memb->name);
     free(memb->buf.base);
     memb->buf.base = NULL;
   }

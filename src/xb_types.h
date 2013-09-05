@@ -44,8 +44,6 @@ typedef struct manager {
   uv_work_t work;
   uv_mutex_t mutex;
 
-  after_read_cb callback;
-
 } manager;
 
 

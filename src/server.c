@@ -210,7 +210,7 @@ read_work(uv_work_t *req) {
 static void 
 read_after(uv_work_t *req, int status) {
   member *memb = (member*)req->data;
-  do_callback(memb->mgr);
+  // do_callback(memb->mgr);
 
   buffer_dispose(memb); 
 }
@@ -239,8 +239,6 @@ process_ready(member *memb, payload *pload) {
   /* when all ready messages recieved, send start */
   printf("recieved READY from %s\n", memb->name);
   memb->schedule_delivered = TRUE;
-  memb->mgr->callback = NULL;
-
   maybe_broadcast_start(memb->mgr);
 }
 
@@ -272,7 +270,7 @@ process_round(member *memb, payload *pload) {
   }
   else {
     if (pload != NULL) {
-      printf("payload != NULL, freeing payload\n");
+      // printf("payload != NULL, freeing payload\n");
       free(pload);
       pload = NULL;
     }
@@ -288,11 +286,10 @@ process_round(member *memb, payload *pload) {
     broadcast_payload(memb->mgr);
 
     memb->mgr->round_finished = TRUE;
-    memb->mgr->callback = reset_round;
+    reset_round(memb->mgr);
   }
   else {
     memb->mgr->round_finished = FALSE;
-    memb->mgr->callback = NULL;
   }
 }
 
@@ -302,8 +299,8 @@ process_round(member *memb, payload *pload) {
 
 static void
 on_write(uv_write_t *req, int status) {
-  member *memb = (member *)req->data;
-  printf("freeing write req for %s\n", memb->name);
+  // member *memb = (member *)req->data;
+  // printf("freeing write req for %s\n", memb->name);
   free(req);
 }
 
@@ -347,7 +344,6 @@ maybe_broadcast_start(manager *mgr) {
     broadcast_payload(mgr);
 
     mgr->chat_started = TRUE;
-    mgr->callback = NULL;
   }
 }
 

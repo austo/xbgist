@@ -99,7 +99,7 @@ assume_buffer(member *memb, void *base, size_t len) {
 
 void
 buffer_dispose(member *memb) {
-  printf("buffer_dispose for %s\n", memb->name);
+  // printf("buffer_dispose for %s\n", memb->name);
   if (memb->buf.base != NULL) {
     free(memb->buf.base);
     memb->buf.base = NULL;
@@ -127,7 +127,6 @@ digest_broadcast(member *memb) {
   payload pload;
 
   // printf("payload memb->buf.len: %d\n",  (int)memb->buf.len);
-
   // printf("payload memb->buf.base: %.*s\n",
   //   (int)(memb->buf.len - 1), memb->buf.base);
 
@@ -203,6 +202,14 @@ process_round(member *memb, payload *pload) {
    */
 
   printf("%s recieved ROUND\n", memb->name);
+
+  if (memb->current_round > SCHED_SIZE - 1) {
+    printf("max schedule reached for %s, requesting schedule\n", memb->name);
+    payload_set(memb->payload, SCHEDULE, 1, 0, NULL);
+    memb->callback = write_payload;
+    return;
+  }
+
   if (memb->schedule[memb->current_round] == pload->modulo) {
     int important = flip_coin();
     payload_set(memb->payload, ROUND, important, 0,
