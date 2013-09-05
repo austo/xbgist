@@ -5,6 +5,7 @@
 
 #define NUM_TEST_USERS 5
 #define CLIENT_ARGC 5
+#define STDIO_COUNT 3
 
 uv_loop_t *loop;
 uv_process_t child_req[NUM_TEST_USERS];
@@ -29,6 +30,16 @@ main(int argc, char **argv) {
   }
 
   loop = uv_default_loop();
+
+  /* display stdio and stderr in main process */
+  options.stdio_count = STDIO_COUNT;
+  uv_stdio_container_t child_stdio[STDIO_COUNT];
+  child_stdio[0].flags = UV_IGNORE;
+  child_stdio[1].flags = UV_INHERIT_FD;
+  child_stdio[1].data.fd = 1;
+  child_stdio[2].flags = UV_INHERIT_FD;
+  child_stdio[2].data.fd = 2;
+  options.stdio = child_stdio;
 
   char *args[CLIENT_ARGC];
   args[0] = client;

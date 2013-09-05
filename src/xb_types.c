@@ -69,7 +69,7 @@ remove_member(manager *mgr, guint memb_id) {
 gboolean
 has_room(manager *mgr) {
   guint tsize = g_hash_table_size(mgr->members);
-  fprintf(stdout, "g_hash_table_size: %d\n", tsize);
+  // fprintf(stdout, "g_hash_table_size: %d\n", tsize);
   return tsize < mgr->member_count ? TRUE : FALSE;
 }
 
@@ -91,7 +91,7 @@ all_messages_processed(manager *mgr) {
 gboolean
 all_schedules_delivered(manager *mgr) {
   gboolean retval = TRUE;
-  iterate_members(mgr, g_message_processed, &retval, FALSE);
+  iterate_members(mgr, g_schedule_delivered, &retval, FALSE);
   return retval;
 }
 
@@ -233,6 +233,7 @@ assume_buffer(member *memb, void *base, size_t len) {
 
 void
 buffer_dispose(member *memb) {
+  printf("buffer_dispose for %s\n", memb->name);
   if (memb->buf.base != NULL) {
     free(memb->buf.base);
     memb->buf.base = NULL;
@@ -243,7 +244,9 @@ buffer_dispose(member *memb) {
 
 void
 assume_payload(manager *mgr, payload *pload) {
-  free(mgr->payload);
+  if (mgr->payload != NULL) {
+    free(mgr->payload);
+  }
   mgr->payload = pload;
   pload = NULL;
 }

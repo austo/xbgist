@@ -104,11 +104,7 @@ new_member_work(uv_work_t *req) {
     insert_member(xb_manager, memb->id, memb);
 
     payload pload;
-    payload_set(&pload, WELCOME, 1, 0, NULL);
-    // pload.type = WELCOME;
-    // pload.is_important = 1;
-    // pload.modulo = 0;
-    // fill_random_msg(pload.content, CONTENT_SIZE);
+    payload_set(&pload, WELCOME, 1, 0, memb->name);    
 
     char buf[ALLOC_BUF_SIZE];
     serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
@@ -128,15 +124,10 @@ new_member_after(uv_work_t *req, int status) {
   if (!memb->present) {
     uv_close((uv_handle_t*)&memb->handle, on_close);
     return;
-  }
-
-  uv_mutex_lock(&memb->mgr->mutex);
-  if (!memb->mgr->schedules_sent && all_members_present(memb->mgr)) {
-    broadcast_schedules(memb->mgr);
-  }
-  uv_mutex_unlock(&memb->mgr->mutex);
-  
+  }  
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
+
+  maybe_broadcast_schedules(memb->mgr);
 }
 
 
@@ -186,6 +177,7 @@ read_work(uv_work_t *req) {
   switch(temp_pload->type) {
     case WELCOME: {
       process_welcome(memb, temp_pload);
+      break;
     }
     case SCHEDULE: {
       process_schedule(memb, temp_pload);
@@ -226,12 +218,15 @@ read_after(uv_work_t *req, int status) {
 
 static void
 process_welcome(member *memb, payload *pload) {
+  printf("recieved WELCOME from %s\n", memb->name);
   /* as of now, client should not be sending this... */
   assert(0 == 1);
 }
 
 static void
 process_schedule(member *memb, payload *pload) {
+  printf("recieved SCHEDULE from %s\n", memb->name);
+
   /* TODO: implement as client schedule request */
   assert(0 == 1);
 }
@@ -240,22 +235,18 @@ process_schedule(member *memb, payload *pload) {
 static void
 process_ready(member *memb, payload *pload) {
   /* when all ready messages recieved, send start */
-
+  printf("recieved READY from %s\n", memb->name);
   memb->schedule_delivered = TRUE;
+  memb->mgr->callback = NULL;
 
-  if (all_schedules_delivered(memb->mgr)) {
-    fill_start_payload(memb->mgr);
-    broadcast_payload(memb->mgr);
-
-    memb->mgr->chat_started = TRUE;
-    memb->mgr->callback = NULL;
-  }
+  maybe_broadcast_start(memb->mgr);
 }
 
 
 static void
 process_start(member *memb, payload *pload) {
   /* as of now, client should not be sending this... */
+  printf("recieved START from %s\n", memb->name);
   assert(0 == 1);
 }
 
@@ -268,7 +259,8 @@ process_round(member *memb, payload *pload) {
    * set buffer for group
    * broadcast
    */
-
+  printf("recieved ROUND from %s\n", memb->name);
+ 
   if (member_can_transmit(memb->mgr, memb)) {
     assume_payload(memb->mgr, pload);
 
@@ -322,6 +314,40 @@ on_close(uv_handle_t* handle) {
 
 
 static void
+maybe_broadcast_schedules(manager *mgr) {
+  uv_mutex_lock(&mgr->mutex);
+  if (!mgr->schedules_sent && all_members_present(mgr)) {
+    usleep(1000);
+    printf("broadcasting schedules...\n");
+    broadcast_schedules(mgr);
+  }
+  uv_mutex_unlock(&mgr->mutex);
+}
+
+
+static void
+maybe_broadcast_start(manager *mgr) {
+  if (mgr->chat_started) {
+    mgr->callback = NULL;
+    return;
+  }
+  if (all_schedules_delivered(mgr)) {
+    uv_mutex_lock(&mgr->mutex);
+    if (mgr->chat_started) { goto UNLOCK; }
+
+    fill_start_payload(mgr);
+    broadcast_payload(mgr);
+
+    mgr->chat_started = TRUE;
+
+    UNLOCK:
+    mgr->callback = NULL;
+    uv_mutex_unlock(&mgr->mutex);
+  }
+}
+
+
+static void
 broadcast(struct manager *mgr, const char *fmt, ...) {
   char msg[ALLOC_BUF_SIZE];
   va_list ap;
@@ -336,7 +362,7 @@ broadcast(struct manager *mgr, const char *fmt, ...) {
 
 static void
 broadcast_payload(manager *mgr) {
-  char msg[ALLOC_BUF_SIZE] = {0};
+  char msg[ALLOC_BUF_SIZE];
   serialize_payload(mgr->payload, msg, ALLOC_BUF_SIZE);
   iterate_members(mgr, g_unicast, msg, FALSE);
 }
@@ -382,7 +408,7 @@ unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);
   uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
   void *addr = req + 1;
-  memcpy(addr, &msg[0], ALLOC_BUF_SIZE);  
+  memcpy(addr, msg, ALLOC_BUF_SIZE);  
   uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
   memb->message_processed = FALSE;

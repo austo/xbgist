@@ -24,6 +24,12 @@ broadcast_payload(manager *mgr);
 static void
 broadcast_schedules(manager *mgr);
 
+static void
+maybe_broadcast_schedules(manager *mgr);
+
+static void
+maybe_broadcast_start(manager *mgr);
+
 static uv_buf_t
 on_alloc(uv_handle_t* handle, size_t suggested_size);
 

@@ -99,6 +99,7 @@ assume_buffer(member *memb, void *base, size_t len) {
 
 void
 buffer_dispose(member *memb) {
+  printf("buffer_dispose for %s\n", memb->name);
   if (memb->buf.base != NULL) {
     free(memb->buf.base);
     memb->buf.base = NULL;
@@ -125,16 +126,16 @@ digest_broadcast(member *memb) {
   /* deserialize payload */
   payload pload;
 
-  printf("payload memb->buf.len: %d\n",  (int)memb->buf.len);
+  // printf("payload memb->buf.len: %d\n",  (int)memb->buf.len);
 
-  printf("payload memb->buf.base: %.*s\n",
-    (int)(memb->buf.len - 1), memb->buf.base);
+  // printf("payload memb->buf.base: %.*s\n",
+  //   (int)(memb->buf.len - 1), memb->buf.base);
 
   deserialize_payload(&pload, memb->buf.base, memb->buf.len);
 
   switch(pload.type) {
     case WELCOME: {
-      printf("%s\n", pload.content);
+      process_welcome(memb, &pload);
       break; 
     }
     case SCHEDULE: {
@@ -155,8 +156,18 @@ digest_broadcast(member *memb) {
 
 
 void
+process_welcome(member *memb, payload *pload) {
+  strcpy(memb->name, pload->content);
+  printf("%s recieved WELCOME\n", memb->name);
+  memb->callback = NULL;
+}
+
+
+void
 process_schedule(member *memb, payload *pload) {
   /* add schedule to member, respond with ready message */
+  printf("%s recieved SCHEDULE\n", memb->name);
+
   memcpy(memb->schedule, pload->content, CONTENT_SIZE);
 
   payload *temp_pload = payload_new(READY, 1, 0, NULL);
@@ -168,6 +179,7 @@ process_schedule(member *memb, payload *pload) {
 void
 process_ready(member *memb, payload *pload) {
   // as of now, the server shouldn't be sending this...
+  printf("%s recieved READY\n", memb->name);
   assert(0 == 1);
 }
 
@@ -175,7 +187,7 @@ process_ready(member *memb, payload *pload) {
 void
 process_start(member *memb, payload *pload) {
   /* can actually call process_round */
-
+  printf("%s recieved START\n", memb->name);
   assert(0 == 1);
 }
 
@@ -190,7 +202,7 @@ process_round(member *memb, payload *pload) {
    * 4. send & set callback
    */
 
-
+  printf("%s recieved ROUND\n", memb->name);
   if (memb->schedule[memb->current_round] == pload->modulo) {
     int important = flip_coin();
     payload_set(memb->payload, ROUND, important, 0,

@@ -69,6 +69,9 @@ void
 digest_broadcast(member *memb);
 
 void
+process_welcome(member *memb, payload *pload);
+
+void
 process_schedule(member *memb, payload *pload);
 
 void

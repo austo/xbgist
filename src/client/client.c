@@ -102,7 +102,7 @@ on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
     }
   }
 
-  printf("inside on_read\n");
+  // printf("inside on_read\n");
   
   member *memb = (member*)server->data;
 
@@ -151,11 +151,11 @@ on_write(uv_write_t *req, int status) {
 
 static void
 unicast(struct member *memb, const char *msg) {
-  size_t len = strlen(msg);
-  uv_write_t *req = xb_malloc(sizeof(*req) + len);
+  // size_t len = strlen(msg);
+  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
   void *addr = req + 1;
-  memcpy(addr, msg, len);
-  uv_buf_t buf = uv_buf_init(addr, len);
+  memcpy(addr, msg, ALLOC_BUF_SIZE);
+  uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
   uv_write(req, (uv_stream_t*) &memb->client, &buf, 1, on_write);
 }
 
@@ -164,7 +164,8 @@ unicast(struct member *memb, const char *msg) {
 void
 write_payload(struct member *memb) {
   // allocate & serialize payload
-  char msg[ALLOC_BUF_SIZE] = {0};
+  printf("%s sending payload(%d)\n", memb->name, memb->payload->type);
+  char msg[ALLOC_BUF_SIZE];
   serialize_payload(memb->payload, msg, ALLOC_BUF_SIZE);
   unicast(memb, msg);
   if (memb->payload->type == ROUND) {
