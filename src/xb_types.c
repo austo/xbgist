@@ -202,6 +202,7 @@ member_new() {
   memb->message_processed = FALSE;
   memb->work.data = memb;
   memb->handle.data = memb;
+  memb->buf.base = NULL;
   return memb;  
 }
 
@@ -224,6 +225,7 @@ g_member_dispose(gpointer data) {
 void
 assume_buffer(member *memb, void *base, size_t len) {
   if (memb->buf.base != NULL) {
+    printf("assume_buffer: freeing buf.base for %s\n", memb->name);
     free(memb->buf.base);
   }
   memb->buf.base = base;
@@ -235,6 +237,7 @@ void
 buffer_dispose(member *memb) {
   printf("buffer_dispose for %s\n", memb->name);
   if (memb->buf.base != NULL) {
+    printf("freeing buf.base for %s\n", memb->name);
     free(memb->buf.base);
     memb->buf.base = NULL;
   }

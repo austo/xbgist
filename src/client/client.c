@@ -83,8 +83,6 @@ on_connect(uv_connect_t *req, int status) {
     return;
   }
 
-  printf("inside on_connect\n");
-
   member *memb = (member*)req->data;
   memb->server = req->handle;
 
@@ -102,8 +100,6 @@ on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
     }
   }
 
-  // printf("inside on_read\n");
-  
   member *memb = (member*)server->data;
 
   if (nread == EOF){

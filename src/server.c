@@ -197,9 +197,11 @@ read_work(uv_work_t *req) {
     }    
   }
 
-  if (temp_pload != NULL) {
-    free(temp_pload);
-  }
+  /* TODO: make ^ functions responsible for freeing temp_pload,
+   * or pass **payload and set to null */
+  // if (temp_pload != NULL) {
+  //   free(temp_pload);
+  // }
 
   uv_mutex_unlock(&memb->mgr->mutex);
 }
@@ -269,8 +271,11 @@ process_round(member *memb, payload *pload) {
     }
   }
   else {
-    free(pload);
-    pload = NULL;
+    if (pload != NULL) {
+      printf("payload != NULL, freeing payload\n");
+      free(pload);
+      pload = NULL;
+    }
   }
 
   memb->message_processed = TRUE;
@@ -297,6 +302,8 @@ process_round(member *memb, payload *pload) {
 
 static void
 on_write(uv_write_t *req, int status) {
+  member *memb = (member *)req->data;
+  printf("freeing write req for %s\n", memb->name);
   free(req);
 }
 
@@ -327,22 +334,20 @@ maybe_broadcast_schedules(manager *mgr) {
 
 static void
 maybe_broadcast_start(manager *mgr) {
-  if (mgr->chat_started) {
-    mgr->callback = NULL;
-    return;
-  }
-  if (all_schedules_delivered(mgr)) {
-    uv_mutex_lock(&mgr->mutex);
-    if (mgr->chat_started) { goto UNLOCK; }
+  printf("entering maybe_broadcast_start\n");
 
+  if (mgr->chat_started) { return; }
+
+  if (all_schedules_delivered(mgr)) {
+    
+    printf("all schedules delivered, filling payload\n");
     fill_start_payload(mgr);
+
+    printf("broadcasting payload\n");
     broadcast_payload(mgr);
 
     mgr->chat_started = TRUE;
-
-    UNLOCK:
     mgr->callback = NULL;
-    uv_mutex_unlock(&mgr->mutex);
   }
 }
 
@@ -407,6 +412,7 @@ static void
 unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);
   uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
+  req->data = memb;
   void *addr = req + 1;
   memcpy(addr, msg, ALLOC_BUF_SIZE);  
   uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
