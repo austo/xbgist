@@ -30,11 +30,11 @@ maybe_broadcast_schedules(manager *mgr);
 static void
 maybe_broadcast_start(manager *mgr);
 
-static uv_buf_t
-on_alloc(uv_handle_t* handle, size_t suggested_size);
+static void
+on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf);
 
 static void
-on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf);
+on_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t *buf);
 
 static void
 on_write(uv_write_t *req, int status);

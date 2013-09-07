@@ -125,9 +125,8 @@ deserialize_payload(struct payload *pload, void *from, size_t len) {
 
 
 void
-fatal(const char *what) {
-  uv_err_t err = uv_last_error(uv_default_loop());
-  fprintf(stderr, "%s: %s\n", what, uv_strerror(err));
+fatal(int status, const char *what) {
+  fprintf(stderr, "%s: %s\n", what, uv_strerror(status));
   exit(1);
 }
 
@@ -162,9 +161,11 @@ const char *
 addr_and_port(struct member *memb) {
   struct sockaddr_in name;
   int namelen = sizeof(name);
-  if (uv_tcp_getpeername(
-    &memb->handle, (struct sockaddr*) &name, &namelen)){
-    fatal("uv_tcp_getpeername");
+  int uv_res = uv_tcp_getpeername(
+    &memb->handle, (struct sockaddr*) &name, &namelen);
+
+  if (uv_res){
+    fatal(uv_res, "uv_tcp_getpeername");
   }
 
   char addr[16];

@@ -10,7 +10,7 @@
 #include "util.h"
 #include "xb_types.h"
 
-#define SERVER_ADDR "0.0.0.0" // a.k.a. "all interfaces"
+#define SERVER_ADDR "127.0.0.1"
 
 #define N_TEST_MEMBERS 5
 
@@ -42,14 +42,20 @@ main(int argc, char** argv) {
   uv_tcp_t server_handle;
   uv_tcp_init(loop, &server_handle);
 
-  const struct sockaddr_in addr = uv_ip4_addr(SERVER_ADDR, s_port);
-  if (uv_tcp_bind(&server_handle, addr)){
-    fatal("uv_tcp_bind");
+  struct sockaddr_in addr;
+  assert(0 == uv_ip4_addr(SERVER_ADDR, s_port, &addr));
+
+  int uv_res;
+
+  uv_res = uv_tcp_bind(&server_handle, (const struct sockaddr*) &addr);
+  if (uv_res) {
+    fatal(uv_res, "uv_tcp_bind");
   }
 
   const int backlog = 128;
-  if (uv_listen((uv_stream_t*)&server_handle, backlog, on_connection)) {
-    fatal("uv_listen");
+  uv_res = uv_listen((uv_stream_t*)&server_handle, backlog, on_connection);
+  if (uv_res) {
+    fatal(uv_res, "uv_listen");
   }
 
   printf("Listening at %s:%d\n", SERVER_ADDR, s_port);
@@ -69,8 +75,9 @@ on_connection(uv_stream_t* server_handle, int status) {
 
   uv_tcp_init(loop, &memb->handle);
 
-  if (uv_accept(server_handle, (uv_stream_t*) &memb->handle)){
-    fatal("uv_accept");
+  int uv_res = uv_accept(server_handle, (uv_stream_t*) &memb->handle);
+  if (uv_res){
+    fatal(uv_res, "uv_accept");
   }
 
   status = uv_queue_work(
@@ -131,14 +138,16 @@ new_member_after(uv_work_t *req, int status) {
 }
 
 
-static uv_buf_t
-on_alloc(uv_handle_t* handle, size_t suggested_size) {
-  return uv_buf_init(xb_malloc(suggested_size), suggested_size);
+// TODO: see about using a static char buf[SZ] instead of mem alloc
+static void
+on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf) {
+  buf->base = xb_malloc(suggested_size);
+  buf->len = suggested_size;  
 }
 
 
 static void 
-on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
+on_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t *buf) {
   member *memb = (member*)handle->data;
   if (nread == -1) {
   /* user disconnected */
@@ -151,7 +160,7 @@ on_read(uv_stream_t* handle, ssize_t nread, uv_buf_t buf) {
 
   assert(memb->present);  
 
-  assume_buffer(memb, buf.base, nread);  
+  assume_buffer(memb, buf->base, nread);  
 
   int status = uv_queue_work(
     loop,

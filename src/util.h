@@ -35,7 +35,7 @@ void
 deserialize_payload(struct payload *pload, void *buf, size_t len);
 
 void
-fatal(const char *what);
+fatal(int status, const char *what);
 
 void *
 xb_malloc(size_t size);

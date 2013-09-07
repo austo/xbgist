@@ -38,7 +38,14 @@ main(int argc, char **argv) {
   }
 
   int port = atoi(argv[2]);
-  struct sockaddr_in xb_addr = uv_ip4_addr(argv[1], port);
+
+  int uv_res;
+  struct sockaddr_in xb_addr;
+  uv_res = uv_ip4_addr(argv[1], port, &xb_addr);
+
+  if (uv_res) {
+    fatal(uv_res, "could not obtain IP address");
+  }
 
   loop = uv_default_loop();
 
@@ -46,15 +53,15 @@ main(int argc, char **argv) {
 
   uv_tcp_init(loop, &memb->client);
 
-  int status = uv_tcp_connect(
+  uv_res = uv_tcp_connect(
     &memb->connection,
     &memb->client,
-    xb_addr,
+    (const struct sockaddr*) &xb_addr,
     on_connect
   );
 
-  if (status) {
-    fatal("could not connect to server");
+  if (uv_res) {
+    fatal(uv_res, "could not connect to server");
   }
 
   return uv_run(loop, UV_RUN_DEFAULT);
@@ -69,9 +76,10 @@ on_close(uv_handle_t* handle) {
 }
 
 
-static uv_buf_t
-on_alloc(uv_handle_t* handle, size_t suggested_size) {  
-  return uv_buf_init(xb_malloc(suggested_size), suggested_size);  
+static void
+on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf) {
+  buf->base = xb_malloc(suggested_size);
+  buf->len = suggested_size;  
 }
 
 
@@ -79,7 +87,7 @@ void
 on_connect(uv_connect_t *req, int status) {
   if (status == -1) {
     fprintf(stderr, "Error connecting to xblab server: %s\n",
-      uv_err_name(uv_last_error(loop)));
+      uv_strerror(status));
     return;
   }
 
@@ -91,14 +99,14 @@ on_connect(uv_connect_t *req, int status) {
 
 
 void
-on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
+on_read(uv_stream_t* server, ssize_t nread, const uv_buf_t *buf) {
 
-  if (nread == -1) {
-    if (uv_last_error(loop).code != UV_EOF) {
-      fprintf(stderr, "Read error %s\n", 
-        uv_err_name(uv_last_error(loop)));
-    }
-  }
+  // if (nread == -1) {
+  //   if (uv_last_error(loop).code != UV_EOF) {
+  //     fprintf(stderr, "Read error %s\n", 
+  //       uv_err_name(uv_last_error(loop)));
+  //   }
+  // }
 
   member *memb = (member*)server->data;
 
@@ -108,7 +116,7 @@ on_read(uv_stream_t* server, ssize_t nread, uv_buf_t buf) {
     return;
   }
 
-  assume_buffer(memb, buf.base, nread);
+  assume_buffer(memb, buf->base, nread);
 
   int status = uv_queue_work(
     loop,
@@ -139,7 +147,7 @@ void
 on_write(uv_write_t *req, int status) {
   if (status == -1) {
     fprintf(stderr, "Write error %s\n",
-      uv_err_name(uv_last_error(loop)));
+      uv_strerror(status));
     return;
   }  
 }
