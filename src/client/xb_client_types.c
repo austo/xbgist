@@ -70,28 +70,20 @@ member_new() {
 
 void
 member_dispose(member *memb) {
-  if (memb->payload != NULL) {
-    free(memb->payload);
-  }
+  free(memb->payload);
   free(memb);
-  memb = NULL;
 }
 
 
 void
 assume_payload(member *memb, payload *pload) {
-  if (memb->payload != NULL) {
-    free(memb->payload);
-  }
+  free(memb->payload);
   memb->payload = pload;
-  pload = NULL;
 }
 
 void
 assume_buffer(member *memb, void *base, size_t len) {
-  if (memb->buf.base != NULL) {
-    free(memb->buf.base);
-  }
+  free(memb->buf.base);
   memb->buf.base = base;
   memb->buf.len = len;
 }
@@ -99,11 +91,8 @@ assume_buffer(member *memb, void *base, size_t len) {
 
 void
 buffer_dispose(member *memb) {
-  // printf("buffer_dispose for %s\n", memb->name);
-  if (memb->buf.base != NULL) {
-    free(memb->buf.base);
-    memb->buf.base = NULL;
-  }
+  free(memb->buf.base);
+  memb->buf.base = NULL;
   memb->buf.len = 0;
 }
 
