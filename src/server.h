@@ -25,7 +25,8 @@ static void
 broadcast_schedules(manager *mgr);
 
 static void
-maybe_broadcast_schedules(manager *mgr);
+maybe_broadcast_schedules(manager *mgr, gboolean lock,
+	gboolean(*test)(manager *));
 
 static void
 maybe_broadcast_start(manager *mgr);

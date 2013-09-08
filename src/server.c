@@ -24,7 +24,7 @@ main(int argc, char** argv) {
 
   if (argc != 2){
     fprintf(stderr, "usage: %s port\n", argv[0]);
-    return 1;
+    exit(1);
   }
 
   /* initialize rng for sentences & filler */
@@ -134,7 +134,7 @@ new_member_after(uv_work_t *req, int status) {
   }  
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
 
-  maybe_broadcast_schedules(memb->mgr);
+  maybe_broadcast_schedules(memb->mgr, TRUE, all_members_present);
 }
 
 
@@ -183,6 +183,7 @@ read_work(uv_work_t *req) {
 
   deserialize_payload(temp_pload, memb->buf.base, memb->buf.len);
 
+  /* process_* functions are guaranteed to free their payloads */
   switch(temp_pload->type) {
     case WELCOME: {
       process_welcome(memb, temp_pload);
@@ -204,13 +205,7 @@ read_work(uv_work_t *req) {
       process_round(memb, temp_pload);
       break;
     }    
-  }
-
-  /* TODO: make ^ functions responsible for freeing temp_pload,
-   * or pass **payload and set to null */
-  // if (temp_pload != NULL) {
-  //   free(temp_pload);
-  // }
+  }  
 
   uv_mutex_unlock(&memb->mgr->mutex);
 }
@@ -225,21 +220,32 @@ read_after(uv_work_t *req, int status) {
 }
 
 
-/* ROUND WORK FUNCTIONS */
+/* ROUND WORK FUNCTIONS
+ * all process_* functions must free
+ * (or otherwise handle) their payloads */
 
 static void
 process_welcome(member *memb, payload *pload) {
   printf("recieved WELCOME from %s\n", memb->name);
   /* as of now, client should not be sending this... */
+  free(pload);
   assert(0 == 1);
 }
+
 
 static void
 process_schedule(member *memb, payload *pload) {
   printf("recieved SCHEDULE from %s\n", memb->name);
 
-  /* TODO: implement as client schedule request */
-  assert(0 == 1);
+  /* TODO: implement as client schedule request
+   * Do we have a request from all members?
+   * If so, send them all a schedule and wait for ready response,
+   * then begin another round.
+   */
+  memb->mgr->schedules_sent = FALSE;
+  memb->schedule_delivered = FALSE;
+  free(pload);
+  maybe_broadcast_schedules(memb->mgr, FALSE, all_members_need_schedule);
 }
 
 
@@ -248,6 +254,8 @@ process_ready(member *memb, payload *pload) {
   /* when all ready messages recieved, send start */
   printf("recieved READY from %s\n", memb->name);
   memb->schedule_delivered = TRUE;
+
+  free(pload);
   maybe_broadcast_start(memb->mgr);
 }
 
@@ -256,6 +264,8 @@ static void
 process_start(member *memb, payload *pload) {
   /* as of now, client should not be sending this... */
   printf("recieved START from %s\n", memb->name);
+
+  free(pload);
   assert(0 == 1);
 }
 
@@ -278,11 +288,7 @@ process_round(member *memb, payload *pload) {
     }
   }
   else {
-    if (pload != NULL) {
-      // printf("payload != NULL, freeing payload\n");
-      free(pload);
-      pload = NULL;
-    }
+    free(pload);
   }
 
   memb->message_processed = TRUE;
@@ -327,14 +333,15 @@ on_close(uv_handle_t* handle) {
 
 
 static void
-maybe_broadcast_schedules(manager *mgr) {
-  uv_mutex_lock(&mgr->mutex);
-  if (!mgr->schedules_sent && all_members_present(mgr)) {
+maybe_broadcast_schedules(manager *mgr, gboolean lock,
+  gboolean(*test)(manager *)) {
+  if (lock) { uv_mutex_lock(&mgr->mutex); }
+  if (!mgr->schedules_sent && test(mgr)) {
     usleep(1000);
     printf("broadcasting schedules...\n");
     broadcast_schedules(mgr);
   }
-  uv_mutex_unlock(&mgr->mutex);
+  if (lock) { uv_mutex_unlock(&mgr->mutex); }
 }
 
 
@@ -388,6 +395,7 @@ broadcast_schedules(manager *mgr) {
   fill_member_schedules(mgr, NULL);
   iterate_members(mgr, g_unicast_payload, mgr->payload->content, FALSE);
   mgr->schedules_sent = TRUE;
+  mgr->chat_started = FALSE;
 }
 
 

@@ -95,6 +95,14 @@ all_schedules_delivered(manager *mgr) {
 }
 
 
+gboolean
+all_members_need_schedule(manager *mgr) {
+  gboolean retval = TRUE;
+  iterate_members(mgr, g_member_needs_schedule, &retval, FALSE);
+  return retval;
+}
+
+
 void
 g_message_processed(gpointer key, gpointer value, gpointer data) {
   member *memb = (member *)value;
@@ -133,6 +141,16 @@ g_member_present(gpointer key, gpointer value, gpointer data) {
   gboolean *present = (gboolean *)data;
   if (*present) {
     *present = memb->present;
+  }
+}
+
+
+void
+g_member_needs_schedule(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  gboolean *need_sched = (gboolean *)data;
+  if (*need_sched) {
+    *need_sched = !memb->schedule_delivered;
   }
 }
 

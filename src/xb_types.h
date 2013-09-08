@@ -94,6 +94,9 @@ all_schedules_delivered(manager *mgr);
 gboolean
 all_messages_processed(manager *mgr);
 
+gboolean
+all_members_need_schedule(manager *mgr);
+
 void
 g_message_processed(gpointer key, gpointer value, gpointer data);
 
@@ -102,6 +105,9 @@ g_member_present(gpointer key, gpointer value, gpointer data);
 
 void
 g_schedule_delivered(gpointer key, gpointer value, gpointer data);
+
+void
+g_member_needs_schedule(gpointer key, gpointer value, gpointer data);
 
 void
 g_get_schedule_addr(gpointer key, gpointer value, gpointer data);

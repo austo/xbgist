@@ -171,6 +171,7 @@ process_schedule(member *memb, payload *pload) {
 
   payload *temp_pload = payload_new(READY, 1, 0, NULL);
   assume_payload(memb, temp_pload);
+  memb->current_round = 0;
   memb->callback = write_payload;
 }
 

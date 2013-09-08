@@ -99,14 +99,7 @@ on_connect(uv_connect_t *req, int status) {
 
 
 void
-on_read(uv_stream_t* server, ssize_t nread, const uv_buf_t *buf) {
-
-  // if (nread == -1) {
-  //   if (uv_last_error(loop).code != UV_EOF) {
-  //     fprintf(stderr, "Read error %s\n", 
-  //       uv_err_name(uv_last_error(loop)));
-  //   }
-  // }
+on_read(uv_stream_t* server, ssize_t nread, const uv_buf_t *buf) {  
 
   member *memb = (member*)server->data;
 
