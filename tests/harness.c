@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <uv.h>
 
 #define NUM_TEST_USERS 5
@@ -16,7 +17,7 @@ char *client = "out/client";
 
 static void
 on_proc_exit(uv_process_t *req, int64_t exit_status, int term_signal) {
-    fprintf(stderr, "Process exited with status %lld (%s), signal %d\n",
+    fprintf(stderr, "Process exited with status %" PRId64 "(%s), signal %d\n",
       exit_status, strerror(exit_status), term_signal);
     uv_close((uv_handle_t*) req, NULL);
 }

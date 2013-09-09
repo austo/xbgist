@@ -22,9 +22,6 @@ read_work(uv_work_t *r);
 void
 read_after(uv_work_t *r);
 
-void
-on_write(uv_write_t *req, int status);
-
 static void
 unicast(struct member *memb, const char *msg);
 

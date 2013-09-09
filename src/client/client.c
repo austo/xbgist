@@ -136,16 +136,6 @@ read_after(uv_work_t *r) {
 }
 
 
-void
-on_write(uv_write_t *req, int status) {
-  if (status == -1) {
-    fprintf(stderr, "Write error %s\n",
-      uv_strerror(status));
-    return;
-  }  
-}
-
-
 static void
 unicast(struct member *memb, const char *msg) {
   // size_t len = strlen(msg);

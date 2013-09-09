@@ -12,9 +12,9 @@
 
 #define do_callback(m) if (m->callback != NULL) m->callback(m)
 
-struct manager;
+struct member;
 typedef unsigned short sched_t;
-typedef void (*after_read_cb)(struct manager *);
+typedef void (*after_read_cb)(struct member *);
 
 typedef enum {
   WELCOME, SCHEDULE, READY, START, ROUND
@@ -61,6 +61,9 @@ typedef struct member {
   uv_tcp_t handle;
   uv_work_t work;
   uv_buf_t buf;
+
+  after_read_cb callback;
+
 } member;
 
 
@@ -141,6 +144,9 @@ assume_buffer(member *memb, void *base, size_t len);
 
 void
 buffer_dispose(member *memb);
+
+void
+unicast_buffer(struct member *memb);
 
 payload *
 payload_new(

@@ -20,7 +20,7 @@ uv_mutex_t xb_mutex;
 
 
 int
-main(int argc, char** argv) {
+main(int argc, char **argv) {
 
   if (argc != 2){
     fprintf(stderr, "usage: %s port\n", argv[0]);
@@ -113,10 +113,10 @@ new_member_work(uv_work_t *req) {
     payload pload;
     payload_set(&pload, WELCOME, 1, 0, memb->name);    
 
-    char buf[ALLOC_BUF_SIZE];
+    char *buf = xb_malloc(ALLOC_BUF_SIZE);
     serialize_payload(&pload, buf, ALLOC_BUF_SIZE);
-
-    unicast(memb, buf);
+    assume_buffer(memb, buf, ALLOC_BUF_SIZE);
+    memb->callback = unicast_buffer;
   }
 
   uv_mutex_unlock(&xb_mutex);
@@ -131,9 +131,9 @@ new_member_after(uv_work_t *req, int status) {
   if (!memb->present) {
     uv_close((uv_handle_t*)&memb->handle, on_close);
     return;
-  }  
+  }
+  do_callback(memb);
   uv_read_start((uv_stream_t*) &memb->handle, on_alloc, on_read);
-
   maybe_broadcast_schedules(memb->mgr, TRUE, all_members_present);
 }
 
@@ -214,7 +214,7 @@ read_work(uv_work_t *req) {
 static void 
 read_after(uv_work_t *req, int status) {
   member *memb = (member*)req->data;
-  // do_callback(memb->mgr);
+  // do_callback(memb);
 
   buffer_dispose(memb); 
 }
@@ -310,14 +310,6 @@ process_round(member *memb, payload *pload) {
 
 
 /* END ROUND WORK FUNCTIONS */
-
-
-static void
-on_write(uv_write_t *req, int status) {
-  // member *memb = (member *)req->data;
-  // printf("freeing write req for %s\n", memb->name);
-  free(req);
-}
 
 
 static void
@@ -432,4 +424,3 @@ unicast(struct member *memb, const char *msg) {
   uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
   memb->message_processed = FALSE;
 }
-

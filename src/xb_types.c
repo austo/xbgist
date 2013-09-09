@@ -8,6 +8,9 @@
 #include "util.h"
 
 
+// extern void
+// on_write(uv_write_t *req, int status);
+
 manager *
 manager_new() {
   manager *mgr = xb_malloc(sizeof(*mgr));
@@ -252,6 +255,25 @@ buffer_dispose(member *memb) {
   free(memb->buf.base);
   memb->buf.base = NULL;
   memb->buf.len = 0;
+}
+
+
+void
+unicast_buffer(struct member *memb) {
+  printf("unicasting buffer for %s\n", memb->name);
+  assert(memb->buf.len != 0);
+  printf("memb->buf.len: %zu\n", memb->buf.len);
+  uv_write_t *req = xb_malloc(sizeof(*req) + memb->buf.len);
+  req->data = memb;
+  void *addr = req + 1;
+  memmove(addr, memb->buf.base, memb->buf.len);
+  printf("after memmove\n");  
+  uv_buf_t buf = uv_buf_init(addr, memb->buf.len);
+  printf("after uv_buf_init\n");
+  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
+  printf("after uv_write\n");
+  memb->message_processed = FALSE;
+  memb->callback = NULL;
 }
 
 

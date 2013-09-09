@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include <stddef.h>
+#include <uv.h>
 
 typedef unsigned short sched_t;
 struct member;
@@ -40,6 +41,8 @@ fatal(int status, const char *what);
 void *
 xb_malloc(size_t size);
 
+void
+on_write(uv_write_t *req, int status);
 
 #ifdef XBSERVER
 
