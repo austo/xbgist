@@ -64,6 +64,7 @@ member_new() {
   memb->current_round = 0;
   memb->buf.base = NULL;
   memb->buf.len = 0;
+  memb->callback = NULL;
   return memb;  
 }
 

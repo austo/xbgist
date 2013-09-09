@@ -38,9 +38,6 @@ static void
 on_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t *buf);
 
 static void
-on_write(uv_write_t *req, int status);
-
-static void
 on_close(uv_handle_t* handle);
 
 static void

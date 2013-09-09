@@ -140,6 +140,17 @@ xb_malloc(size_t size) {
 
 
 void
+on_write(uv_write_t *req, int status) {
+  if (status == -1) {
+    fprintf(stderr, "Write error %s\n",
+      uv_strerror(status));
+  }
+  printf("on_write: freeing req\n");
+  free(req);
+}
+
+
+void
 make_name(struct member *memb) {
   // most popular baby names in Alabama in 2011
   static const char *names[] = {
