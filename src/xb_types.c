@@ -443,8 +443,8 @@ attempt_broadcast_round(struct member *memb) {
   else {
     memb->mgr->round_finished = FALSE;
   }
-  uv_mutex_unlock(&memb->mgr->mutex);
   memb->callback = NULL;
+  uv_mutex_unlock(&memb->mgr->mutex);
 }
 
 
