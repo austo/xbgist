@@ -170,6 +170,7 @@ void
 process_ready(member *memb, payload *pload) {
   // as of now, the server shouldn't be sending this...
   printf("%s recieved READY\n", memb->name);
+  memb->callback = NULL;
   assert(0 == 1);
 }
 
@@ -178,6 +179,7 @@ void
 process_start(member *memb, payload *pload) {
   /* can actually call process_round */
   printf("%s recieved START\n", memb->name);
+  memb->callback = NULL;
   assert(0 == 1);
 }
 

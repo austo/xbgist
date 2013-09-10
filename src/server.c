@@ -10,7 +10,6 @@
 #include "xb_types.h"
 
 #define SERVER_ADDR "127.0.0.1"
-
 #define N_TEST_MEMBERS 5
 
 uv_loop_t *loop;
@@ -93,7 +92,7 @@ static void
 new_member_work(uv_work_t *req) {
   member *memb = (member*)req->data;
 
-  // add user to the list
+  /* add user to the list */
   if (!has_room(xb_manager)) { 
     printf("no room in the chat\n");
     return;
@@ -101,7 +100,7 @@ new_member_work(uv_work_t *req) {
 
   uv_mutex_lock(&xb_mutex);
 
-  // phony member id based on arrival order
+  /* phony member id based on arrival order */
   if (has_room(xb_manager)) {
     memb->id = g_hash_table_size(xb_manager->members) + 1;
     make_name(memb);
@@ -214,9 +213,10 @@ read_after(uv_work_t *req, int status) {
 
 
 /* ROUND WORK FUNCTIONS
- * all process_* functions must free
- * (or otherwise handle) their payloads */
-
+ * process_*_work functions must free
+ * (or otherwise handle) their payloads
+ * and keep away from the libuv event loop
+ */
 static void
 process_welcome_work(member *memb, payload *pload) {
   /* as of now, client should not be sending this... */
@@ -232,8 +232,7 @@ static void
 process_schedule_work(member *memb, payload *pload) {
   printf("recieved SCHEDULE from %s\n", memb->name);
 
-  /* TODO: implement as client schedule request
-   * Do we have a request from all members?
+  /* Do we have a request from all members?
    * If so, send them all a schedule and wait for ready response,
    * then begin another round.
    */
@@ -273,7 +272,7 @@ process_round_work(member *memb, payload *pload) {
   /* does user have right to broadcast?
    * does user want to broadcast?
    * set buffer for group
-   * broadcast
+   * queue broadcast
    */
   printf("recieved ROUND from %s\n", memb->name);
  

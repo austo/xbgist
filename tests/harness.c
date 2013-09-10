@@ -17,9 +17,9 @@ char *client = "out/client";
 
 static void
 on_proc_exit(uv_process_t *req, int64_t exit_status, int term_signal) {
-    fprintf(stderr, "Process exited with status %" PRId64 "(%s), signal %d\n",
-      exit_status, strerror(exit_status), term_signal);
-    uv_close((uv_handle_t*) req, NULL);
+  fprintf(stderr, "Process exited with status %" PRId64 "(%s), signal %d\n",
+    exit_status, strerror(exit_status), term_signal);
+  uv_close((uv_handle_t*) req, NULL);
 }
 
 
@@ -55,7 +55,8 @@ main(int argc, char **argv) {
 
   int i, uv_res;
   for (i = 0; i < NUM_TEST_USERS; ++i) {
-    uv_res = uv_spawn(loop, &child_req[i], (const uv_process_options_t*) &options);
+    uv_res = uv_spawn(loop, &child_req[i],
+      (const uv_process_options_t*) &options);
     if (uv_res) {
       fprintf(stderr, "%s\n", uv_strerror(uv_res));
       return 1;

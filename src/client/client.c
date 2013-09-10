@@ -22,7 +22,8 @@ int
 main(int argc, char **argv) {
 
   if (argc < 3 || argc > 4){
-    fprintf(stderr, "usage: %s <hostname> <port> (<sentence_file>)\n", argv[0]);
+    fprintf(stderr,
+      "usage: %s <hostname> <port> (<sentence_file>)\n", argv[0]);
     return 1;
   }
 
@@ -124,7 +125,6 @@ void
 read_after(uv_work_t *r) {
   member *memb = (member*)r->data;
   do_callback(memb);
-
   buffer_dispose(memb);
 }
 

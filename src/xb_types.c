@@ -9,9 +9,6 @@
 #include "util.h"
 
 
-// extern void
-// on_write(uv_write_t *req, int status);
-
 manager *
 manager_new() {
   manager *mgr = xb_malloc(sizeof(*mgr));
@@ -27,6 +24,7 @@ manager_new() {
 }
 
 
+/* TODO: macros to persist NULL after function return */
 void
 manager_dispose(manager *mgr) {
   g_hash_table_destroy(mgr->members);
@@ -72,7 +70,6 @@ remove_member(manager *mgr, guint memb_id) {
 gboolean
 has_room(manager *mgr) {
   guint tsize = g_hash_table_size(mgr->members);
-  // fprintf(stdout, "g_hash_table_size: %d\n", tsize);
   return tsize < mgr->member_count ? TRUE : FALSE;
 }
 
