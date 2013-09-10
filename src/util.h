@@ -41,6 +41,8 @@ fatal(int status, const char *what);
 void *
 xb_malloc(size_t size);
 
+void
+on_write(uv_write_t *req, int status);
 
 /* uv callbacks */
 

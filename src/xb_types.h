@@ -167,7 +167,6 @@ assume_buffer(member *memb, void *base, size_t len);
 void
 buffer_dispose(member *memb);
 
-
 /* after_read_cb functions */
 
 void
@@ -184,6 +183,9 @@ attempt_broadcast_round(struct member *memb);
 
 /* end after_read_cb functions */
 
+
+void
+unicast_buffer(struct member *memb);
 
 payload *
 payload_new(
