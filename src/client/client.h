@@ -10,9 +10,6 @@ on_close(uv_handle_t* handle);
 void
 on_connect(uv_connect_t *req, int status);
 
-static void
-on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf);
-
 void
 on_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t *buf);
 

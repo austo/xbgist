@@ -41,8 +41,17 @@ fatal(int status, const char *what);
 void *
 xb_malloc(size_t size);
 
+
+/* uv callbacks */
+
 void
 on_write(uv_write_t *req, int status);
+
+void
+on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf);
+
+/* end uv callbacks */
+
 
 #ifdef XBSERVER
 

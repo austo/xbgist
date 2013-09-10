@@ -76,13 +76,6 @@ on_close(uv_handle_t* handle) {
 }
 
 
-static void
-on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf) {
-  buf->base = xb_malloc(suggested_size);
-  buf->len = suggested_size;  
-}
-
-
 void
 on_connect(uv_connect_t *req, int status) {
   if (status == -1) {

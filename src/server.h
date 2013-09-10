@@ -7,32 +7,7 @@
 #include "xb_types.h"
 
 static void
-unicast(struct member *memb, const char *msg);
-
-static void
-g_unicast(gpointer key, gpointer value, gpointer data);
-
-static void
-g_unicast_payload(gpointer key, gpointer value, gpointer data);
-
-static void
 broadcast(manager *mgr, const char *fmt, ...);
-
-static void
-broadcast_payload(manager *mgr);
-
-static void
-broadcast_schedules(manager *mgr);
-
-static void
-maybe_broadcast_schedules(manager *mgr, gboolean lock,
-	gboolean(*test)(manager *));
-
-static void
-maybe_broadcast_start(manager *mgr);
-
-static void
-on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t *buf);
 
 static void
 on_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t *buf);
@@ -60,19 +35,19 @@ read_after(uv_work_t *req, int status);
 
 
 static void
-process_welcome(member *memb, payload *pload);
+process_welcome_work(member *memb, payload *pload);
 
 static void
-process_schedule(member *memb, payload *pload);
+process_schedule_work(member *memb, payload *pload);
 
 static void
-process_ready(member *memb, payload *pload);
+process_ready_work(member *memb, payload *pload);
 
 static void
-process_start(member *memb, payload *pload);
+process_start_work(member *memb, payload *pload);
 
 static void
-process_round(member *memb, payload *pload);
+process_round_work(member *memb, payload *pload);
 
 
 

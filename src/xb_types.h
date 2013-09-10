@@ -116,6 +116,12 @@ void
 g_get_schedule_addr(gpointer key, gpointer value, gpointer data);
 
 void
+g_unicast(gpointer key, gpointer value, gpointer data);
+
+void
+g_unicast_payload(gpointer key, gpointer value, gpointer data);
+
+void
 calculate_modulo(manager *mgr);
 
 void
@@ -126,6 +132,22 @@ fill_start_payload(manager *mgr);
 
 void
 fill_member_schedules(manager *mgr, sched_t **schedules);
+
+void
+maybe_broadcast_schedules(manager *mgr, gboolean lock,
+  gboolean(*test)(manager *));
+
+void
+maybe_broadcast_start(manager *mgr, gboolean lock);
+
+void
+broadcast_schedules(manager *mgr);
+
+void
+broadcast_payload(manager *mgr);
+
+void
+unicast(struct member *memb, const char *msg);
 
 void
 assume_payload(manager *mgr, payload *pload);
@@ -145,8 +167,23 @@ assume_buffer(member *memb, void *base, size_t len);
 void
 buffer_dispose(member *memb);
 
+
+/* after_read_cb functions */
+
 void
 unicast_buffer(struct member *memb);
+
+void
+attempt_broadcast_schedules(struct member *memb);
+
+void
+attempt_broadcast_start(struct member *memb);
+
+void
+attempt_broadcast_round(struct member *memb);
+
+/* end after_read_cb functions */
+
 
 payload *
 payload_new(

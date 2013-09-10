@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "xb_types.h"
 #include "util.h"
@@ -106,6 +107,17 @@ all_members_need_schedule(manager *mgr) {
 }
 
 
+gboolean
+all_members_present(manager *mgr) {
+  if (g_hash_table_size(mgr->members) != mgr->member_count) {
+    return FALSE;
+  }
+  gboolean retval = TRUE;
+  iterate_members(mgr, g_member_present, &retval, FALSE);
+  return retval;
+}
+
+
 void
 g_message_processed(gpointer key, gpointer value, gpointer data) {
   member *memb = (member *)value;
@@ -159,6 +171,28 @@ g_member_needs_schedule(gpointer key, gpointer value, gpointer data) {
 
 
 void
+g_unicast_payload(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  
+  char buf[ALLOC_BUF_SIZE];
+
+  /* copy member's schedule into manager's payload */
+  char *content = (char *)data; // memb->mgr->payload->content
+  memcpy(content, memb->schedule, sizeof(memb->schedule));
+  serialize_payload(memb->mgr->payload, buf, ALLOC_BUF_SIZE);
+  unicast(memb, buf);
+}
+
+
+void
+g_unicast(gpointer key, gpointer value, gpointer data) {
+  member *memb = (member *)value;
+  char *msg = (char *)data;
+  unicast(memb, msg);
+}
+
+
+void
 calculate_modulo(manager *mgr) {
   mgr->payload->modulo = simple_random(mgr->member_count);
 }
@@ -204,14 +238,73 @@ fill_member_schedules(manager *mgr, sched_t **schedules) {
 }
 
 
-gboolean
-all_members_present(manager *mgr) {
-  if (g_hash_table_size(mgr->members) != mgr->member_count) {
-    return FALSE;
+void
+maybe_broadcast_schedules(manager *mgr, gboolean lock,
+  gboolean(*test)(manager *)) {
+  if (lock) { uv_mutex_lock(&mgr->mutex); }
+  if (!mgr->schedules_sent && test(mgr)) {
+    usleep(1000);
+    printf("broadcasting schedules...\n");
+    broadcast_schedules(mgr);
   }
-  gboolean retval = TRUE;
-  iterate_members(mgr, g_member_present, &retval, FALSE);
-  return retval;
+  if (lock) { uv_mutex_unlock(&mgr->mutex); }
+}
+
+
+void
+maybe_broadcast_start(manager *mgr, gboolean lock) {
+  printf("entering maybe_broadcast_start\n");
+
+  if (mgr->chat_started) { return; }
+
+  if (lock) { uv_mutex_lock(&mgr->mutex); }
+
+  if (all_schedules_delivered(mgr)) {
+    
+    printf("all schedules delivered, filling payload\n");
+    fill_start_payload(mgr);
+
+    printf("broadcasting payload\n");
+    broadcast_payload(mgr);
+
+    mgr->chat_started = TRUE;
+  }
+  if (lock) { uv_mutex_unlock(&mgr->mutex); }
+}
+
+
+void
+broadcast_schedules(manager *mgr) {
+  /* set schedule && serialize payload for each member */
+  mgr->payload->type = SCHEDULE;
+  mgr->payload->is_important = 1;
+  mgr->payload->modulo = 0;
+
+  fill_member_schedules(mgr, NULL);
+  iterate_members(mgr, g_unicast_payload, mgr->payload->content, FALSE);
+  mgr->schedules_sent = TRUE;
+  mgr->chat_started = FALSE;
+}
+
+
+void
+broadcast_payload(manager *mgr) {
+  char msg[ALLOC_BUF_SIZE];
+  serialize_payload(mgr->payload, msg, ALLOC_BUF_SIZE);
+  iterate_members(mgr, g_unicast, msg, FALSE);
+}
+
+
+void
+unicast(struct member *memb, const char *msg) {
+  // size_t len = strlen(msg);
+  uv_write_t *req = xb_malloc(sizeof(*req) + ALLOC_BUF_SIZE);
+  req->data = memb;
+  void *addr = req + 1;
+  memcpy(addr, msg, ALLOC_BUF_SIZE);  
+  uv_buf_t buf = uv_buf_init(addr, ALLOC_BUF_SIZE);
+  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
+  memb->message_processed = FALSE;
 }
 
 
@@ -259,25 +352,6 @@ buffer_dispose(member *memb) {
 
 
 void
-unicast_buffer(struct member *memb) {
-  printf("unicasting buffer for %s\n", memb->name);
-  assert(memb->buf.len != 0);
-  printf("memb->buf.len: %zu\n", memb->buf.len);
-  uv_write_t *req = xb_malloc(sizeof(*req) + memb->buf.len);
-  req->data = memb;
-  void *addr = req + 1;
-  memmove(addr, memb->buf.base, memb->buf.len);
-  printf("after memmove\n");  
-  uv_buf_t buf = uv_buf_init(addr, memb->buf.len);
-  printf("after uv_buf_init\n");
-  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
-  printf("after uv_write\n");
-  memb->message_processed = FALSE;
-  memb->callback = NULL;
-}
-
-
-void
 assume_payload(manager *mgr, payload *pload) {
   free(mgr->payload);
   mgr->payload = pload;
@@ -318,3 +392,63 @@ payload_set(
     strcpy(pload->content, msg);
   }
 }
+
+
+/* member after_read_cb functions */
+
+void
+unicast_buffer(struct member *memb) {
+  printf("unicasting buffer for %s\n", memb->name);
+  assert(memb->buf.len != 0);
+  printf("memb->buf.len: %zu\n", memb->buf.len);
+  uv_write_t *req = xb_malloc(sizeof(*req) + memb->buf.len);
+  req->data = memb;
+  void *addr = req + 1;
+  memmove(addr, memb->buf.base, memb->buf.len);
+  printf("after memmove\n");  
+  uv_buf_t buf = uv_buf_init(addr, memb->buf.len);
+  printf("after uv_buf_init\n");
+  uv_write(req, (uv_stream_t*) &memb->handle, &buf, 1, on_write);
+  printf("after uv_write\n");
+  memb->message_processed = FALSE;
+  memb->callback = NULL;
+}
+
+
+void
+attempt_broadcast_schedules(struct member *memb) {
+  printf("attempting broadcast schedules\n");
+  maybe_broadcast_schedules(memb->mgr, TRUE, all_members_need_schedule);
+  memb->callback = NULL;
+}
+
+
+void
+attempt_broadcast_start(struct member *memb) {
+  maybe_broadcast_start(memb->mgr, TRUE);
+  memb->callback = NULL;
+}
+
+
+void
+attempt_broadcast_round(struct member *memb) {
+  uv_mutex_lock(&memb->mgr->mutex);
+
+  if (all_messages_processed(memb->mgr)) {
+    calculate_modulo(memb->mgr);
+    memb->mgr->payload->type = ROUND;
+
+    broadcast_payload(memb->mgr);
+
+    memb->mgr->round_finished = TRUE;
+    reset_round(memb->mgr);
+  }
+  else {
+    memb->mgr->round_finished = FALSE;
+  }
+  uv_mutex_unlock(&memb->mgr->mutex);
+  memb->callback = NULL;
+}
+
+
+/* end member after_read_cb functions */
